@@ -40,7 +40,7 @@
 #include <vector>
 
 #include "Grid3DVisitor.h"
-#include "MetisPartitioner.h"
+#include "parallel\MetisPartitioner.h"
 
 namespace vf::parallel {class Communicator;}
 

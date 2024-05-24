@@ -83,7 +83,7 @@ add_subdirectory(src/logger)
 add_subdirectory(src/basics)
 add_subdirectory(src/parallel)
 add_subdirectory(src/lbm)
-
+add_subdirectory(${VF_THIRD_DIR}/metis/metis-5.1.0)
 
 if(VF_ENABLE_CPU)
     include(cpu.cmake)

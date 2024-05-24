@@ -53,7 +53,6 @@ target_compile_definitions(project_options INTERFACE VF_METIS)
 #############################################################
 
 add_subdirectory(${VF_THIRD_DIR}/MuParser)
-add_subdirectory(${VF_THIRD_DIR}/metis/metis-5.1.0)
 
 add_subdirectory(src/cpu/core)
 

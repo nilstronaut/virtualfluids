@@ -32,7 +32,7 @@
 #! \author Soeren Peters
 #=======================================================================================
 
-vf_add_library(PUBLIC_LINK logger basics PRIVATE_LINK project_warnings project_options)
+vf_add_library(PUBLIC_LINK logger basics metis PRIVATE_LINK project_warnings project_options)
 
 if(MSVC)
     target_link_libraries(parallel PRIVATE ws2_32)
