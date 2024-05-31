@@ -29,7 +29,7 @@
 //! \addtogroup gpu_PreCollisionInteractor PreCollisionInteractor
 //! \ingroup gpu_core core
 //! \{
-#include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Probe.h"
 #include "PlanarAverageProbe.h"
 
@@ -106,7 +106,7 @@ struct nth_moment
 
 __global__ void moveIndicesInPosNormalDir( uint* pointIndices, uint nPoints, uint* neighborNormal, real* coordsX, real* coordsY, real* coordsZ )
 {
-    const uint nodeIndex = vf::gpu::getNodeIndex();
+    const uint nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if(nodeIndex>=nPoints) return;
 
@@ -115,7 +115,7 @@ __global__ void moveIndicesInPosNormalDir( uint* pointIndices, uint nPoints, uin
 
 __global__ void moveIndicesInNegNormalDir( uint* pointIndices, uint nPoints, uint* neighborWSB, uint* neighborInplane1, uint* neighborInplane2, real* coordsX, real* coordsY, real* coordsZ )
 {
-    const uint node = vf::gpu::getNodeIndex();
+    const uint node = vf::cuda::get1DIndexFrom2DBlock();
 
     if(node>=nPoints) return;
 

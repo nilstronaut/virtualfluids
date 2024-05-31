@@ -40,13 +40,14 @@
 #include <lbm/MacroscopicQuantities.h>
 
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 
 __global__ void CalcTurbulenceIntensity(real* vxx, real* vyy, real* vzz, real* vxy, real* vxz, real* vyz, real* vx_mean,
                                         real* vy_mean, real* vz_mean, real* distributions, uint* typeOfGridNode,
                                         unsigned int* neighborX, unsigned int* neighborY, unsigned int* neighborZ,
                                         unsigned long long numberOfLBnodes, bool isEvenTimestep)
 {
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if (nodeIndex >= numberOfLBnodes)
         return;

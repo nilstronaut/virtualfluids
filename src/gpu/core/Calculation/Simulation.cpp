@@ -417,7 +417,9 @@ void Simulation::run()
     //    }
     //}
     //  //////////////////////////////////////////////////////////////////////////
-
+    averageTimer.end();
+    metaData.simulation.runtimeSeconds += averageTimer.getTimeInSeconds();
+    performanceOutput->log(averageTimer, para->getTimestepEnd(), communicator);
     metaData.simulation.nups = performanceOutput->getNups();
     metaData.simulation.runtimeSeconds = performanceOutput->totalRuntimeInSeconds();
     vf::basics::logPostSimulation(metaData);

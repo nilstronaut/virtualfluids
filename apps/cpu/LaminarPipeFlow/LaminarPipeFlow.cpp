@@ -89,8 +89,7 @@ void run(const vf::basics::ConfigurationFile& config)
     SPtr<LBMKernel> kernel = SPtr<LBMKernel>(new K17CompressibleNavierStokes());
     kernel->setBCSet(bcProc);
 
-    SPtr<Grid3DVisitor> metisVisitor(
-        new MetisPartitioningGridVisitor(comm, MetisPartitioningGridVisitor::LevelBased, dMMM, MetisPartitioner::RECURSIVE));
+    SPtr<Grid3DVisitor> metisVisitor(new MetisPartitioningGridVisitor(comm, MetisPartitioningGridVisitor::LevelBased, d00M));
 
     //////////////////////////////////////////////////////////////////////////
     // restart

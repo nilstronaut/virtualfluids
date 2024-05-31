@@ -34,6 +34,7 @@
 
 #include <basics/DataTypes.h>
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Utilities/ScalingUtilities.h"
 
 #include <lbm/refinement/InterpolationCF.h>
@@ -322,7 +323,7 @@ template<bool hasTurbulentViscosity> __global__ void scaleCoarseToFineCompressib
     real* turbulentViscosityFine,
     ICellNeigh neighborCoarseToFine)
 {
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if (nodeIndex >= numberOfInterfaceNodes)
         return;

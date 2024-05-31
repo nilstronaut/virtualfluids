@@ -41,7 +41,7 @@
 #include <lbm/collision/CollisionParameter.h>
 #include <lbm/collision/TurbulentViscosity.h>
 
-#include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 
 namespace vf::gpu
 {
@@ -74,7 +74,7 @@ struct GPUCollisionParameter
 template <typename CollisionFunctor, vf::lbm::TurbulenceModel turbulenceModel, bool writeMacroscopicVariables, bool applyBodyForce>
 __global__ void runCollision(CollisionFunctor collision, GPUCollisionParameter collisionParameter)
 {
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if (nodeIndex >= collisionParameter.numberOfFluidNodes)
         return;

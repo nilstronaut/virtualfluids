@@ -213,18 +213,6 @@ __inline__ __device__ real getInterpolatedDistributionForVeloWithPressureBC(cons
            + (q * (f + fInverse) - c6o1 * weight * velocity) / (c1o1 + q) - weight * drho;
 }
 
-__inline__ __device__ unsigned int getNodeIndex()
-{
-    const unsigned x = threadIdx.x;
-    const unsigned y = blockIdx.x;
-    const unsigned z = blockIdx.y;
-
-    const unsigned nx = blockDim.x;
-    const unsigned ny = gridDim.x;
-
-    return nx * (ny * z + y) + x;
-}
-
 __inline__ __device__ bool isValidFluidNode(uint nodeType)
 {
     return (nodeType == GEO_FLUID || nodeType == GEO_PM_0 || nodeType == GEO_PM_1 || nodeType == GEO_PM_2);

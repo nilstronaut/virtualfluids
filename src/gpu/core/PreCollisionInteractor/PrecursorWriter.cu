@@ -37,6 +37,7 @@
 #include <helper_cuda.h>
 #include <cuda_helper/CudaGrid.h>
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 
 #include "StringUtilities/StringUtil.h"
 
@@ -86,7 +87,7 @@ __global__ void fillArrayVelocities(const uint numberOfPrecursorNodes,
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if(nodeIndex>=numberOfPrecursorNodes) return;
 
@@ -108,7 +109,7 @@ __global__ void fillArrayDistributions( uint numberOfPrecursorNodes,
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if(nodeIndex>=numberOfPrecursorNodes) return;
 

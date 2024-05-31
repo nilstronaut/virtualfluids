@@ -46,7 +46,7 @@
 #include "DataStructureInitializer/GridProvider.h"
 #include "Cuda/CudaMemoryManager.h"
 #include "Utilities/GeometryUtils.h"
-#include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Cuda/CudaStreamManager.h"
 #include "Parameter/Parameter.h"
 
@@ -82,7 +82,7 @@ struct ComponentData
 
 __global__ void interpolateVelocities(const GridData gridData, const TurbineData turbineData, ComponentData componentData)
 {
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if (nodeIndex >= componentData.numberOfNodesPerTurbine * turbineData.numberOfTurbines)
         return;
@@ -126,7 +126,7 @@ __global__ void interpolateVelocities(const GridData gridData, const TurbineData
 __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData, const ComponentData componentData)
 {
 
-    const uint index = vf::gpu::getNodeIndex();
+    const uint index = vf::cuda::get1DIndexFrom2DBlock();
 
     if (index >= gridData.nIndices)
         return;

@@ -48,7 +48,7 @@
 #include "gpu/core/DataStructureInitializer/GridProvider.h"
 #include "gpu/core/Cuda/CudaMemoryManager.h"
 #include "gpu/core/Utilities/GeometryUtils.h"
-#include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "gpu/core/Output/FilePartCalculator.h"
 #include "gpu/core/Parameter/Parameter.h"
 
@@ -128,7 +128,7 @@ __global__ void calcQuantitiesKernel(uint* pointIndices, uint nPoints, uint oldT
                                      real* vz, real* rho, uint* neighborX, uint* neighborY, uint* neighborZ,
                                      bool* quantities, uint* quantityArrayOffsets, real* quantityArray)
 {
-    const uint node = vf::gpu::getNodeIndex();
+    const uint node = vf::cuda::get1DIndexFrom2DBlock();
 
     if(node>=nPoints) return;
 
@@ -151,7 +151,7 @@ __global__ void interpAndCalcQuantitiesKernel(uint* pointIndices, uint nPoints, 
                                               uint* neighborX, uint* neighborY, uint* neighborZ, bool* quantities,
                                               uint* quantityArrayOffsets, real* quantityArray)
 {
-    const uint node = vf::gpu::getNodeIndex();
+    const uint node = vf::cuda::get1DIndexFrom2DBlock();
 
     if(node>=nPoints) return;
 

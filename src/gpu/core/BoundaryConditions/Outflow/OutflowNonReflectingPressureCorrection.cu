@@ -36,6 +36,7 @@
 #include "basics/constants/NumericConstants.h"
 #include "lbm/MacroscopicQuantities.h"
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 
 using namespace vf::basics::constant;
 using namespace vf::lbm::dir;
@@ -65,7 +66,7 @@ __global__ void OutflowNonReflectingPressureCorrection_Device(
    ////////////////////////////////////////////////////////////////////////////////
    //! - Get the node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
    //!
-   const unsigned nodeIndex = getNodeIndex();
+   const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
    //////////////////////////////////////////////////////////////////////////
 
