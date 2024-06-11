@@ -46,8 +46,6 @@ IF(${VF_CP_ENABLE_CATALYST})
     target_compile_definitions(project_options INTERFACE VF_CATALYST)
 ENDIF()
 
-target_compile_definitions(project_options INTERFACE VF_METIS)
-
 #############################################################
 ###                  Libraries                            ###
 #############################################################
