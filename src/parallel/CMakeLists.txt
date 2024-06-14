@@ -56,6 +56,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES ".*Clan
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(parallel PRIVATE "/wd4100") # warning C4100: unreferenced formal paramete
-    target_compile_options(parallel PUBLIC "/wd4005") # disable macro redefinition (triggered by metis.h)    
+    target_compile_options(parallel PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4100>")
+    target_compile_options(parallel PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:/wd4100>")
+
+    target_compile_options(parallel PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4005>")
+    target_compile_options(parallel PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:/wd4005>")
 endif()
