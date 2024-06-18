@@ -333,4 +333,76 @@ TEST(GeometryUtilsTest, inverseRotateAboutX3dWithOrigin)
     EXPECT_THAT(newPosY, RealNear(1.0, 10e-5));
     EXPECT_THAT(newPosZ, RealNear(1.0, 10e-5));
 }
+
+TEST(GeometryUtilsTest, trilinearInterpolationX)
+{
+    const real dx = 0.5;
+    const real dy = 0.0;
+    const real dz = 0.0;
+    const int kMMM = 0;
+    const int kMMP = 0;
+    const int kMPM = 0;
+    const int kMPP = 0;
+    const int kPMM = 1;
+    const int kPMP = 1;
+    const int kPPM = 1;
+    const int kPPP = 1;
+    const real quantity[2] = {0.0, 1.0};
+    const real result = trilinearInterpolation(dx, dy, dz, kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, quantity);
+    EXPECT_THAT(result, RealNear(0.5, 10e-5));
+}
+
+TEST(GeometryUtilsTest, trilinearInterpolationY)
+{
+    const real dx = 0.0;
+    const real dy = 0.3;
+    const real dz = 0.0;
+    const int kMMM = 0;
+    const int kMMP = 0;
+    const int kMPM = 1;
+    const int kMPP = 1;
+    const int kPMM = 0;
+    const int kPMP = 0;
+    const int kPPM = 1;
+    const int kPPP = 1;
+    const real quantity[2] = {0.0, 1.0};
+    const real result = trilinearInterpolation(dx, dy, dz, kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, quantity);
+    EXPECT_THAT(result, RealNear(0.3, 10e-5));
+}
+
+TEST(GeometryUtilsTest, trilinearInterpolationZ)
+{
+    const real dx = 0.0;
+    const real dy = 0.0;
+    const real dz = 0.7;
+    const int kMMM = 0;
+    const int kMMP = 1;
+    const int kMPM = 0;
+    const int kMPP = 1;
+    const int kPMM = 0;
+    const int kPMP = 1;
+    const int kPPM = 0;
+    const int kPPP = 1;
+    const real quantity[2] = {0.0, 2.0};
+    const real result = trilinearInterpolation(dx, dy, dz, kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, quantity);
+    EXPECT_THAT(result, RealNear(1.4, 10e-5));
+}
+
+TEST(GeometryUtilsTest, trilinearInterpolationXYZ)
+{
+    const real dx = 0.5;
+    const real dy = 0.5;
+    const real dz = 0.5;
+    const int kMMM = 0;
+    const int kMMP = 1;
+    const int kMPM = 0;
+    const int kMPP = 1;
+    const int kPMM = 0;
+    const int kPMP = 1;
+    const int kPPM = 0;
+    const int kPPP = 1;
+    const real quantity[2] = {0.0, 1.0};
+    const real result = trilinearInterpolation(dx, dy, dz, kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, quantity);
+    EXPECT_THAT(result, RealNear(0.5, 10e-5));
+}
 //! \}
