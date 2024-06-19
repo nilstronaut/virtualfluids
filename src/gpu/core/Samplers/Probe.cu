@@ -93,7 +93,7 @@ __host__ __device__ real computeAndSaveMean(real* quantityArray, real oldValue, 
 __host__ __device__ real computeVariance(real oldVariance, real oldMean, real newMean, real currentValue,
                                          uint numberOfAveragedValues, real inverseCount)
 {
-    return numberOfAveragedValues * oldVariance + (currentValue - oldMean) * (currentValue - newMean) * inverseCount;
+    return (numberOfAveragedValues * oldVariance + (currentValue - oldMean) * (currentValue - newMean)) * inverseCount;
 }
 
 __host__ __device__ real computeAndSaveVariance(real* quantityArray, real oldVariance, uint indexNew, real currentValue,
