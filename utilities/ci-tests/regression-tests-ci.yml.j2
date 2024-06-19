@@ -24,7 +24,7 @@ stages:
     expire_in: 1 hrs
     paths:
       - output/
-    when: on_failure
+    when: always
 
 {% for regression_test in test_jobs %}
 run-regression-test-{{ regression_test[1] }}-{{ regression_test[0] }}:
