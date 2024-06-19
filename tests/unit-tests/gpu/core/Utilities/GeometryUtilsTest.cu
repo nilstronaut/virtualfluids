@@ -405,4 +405,29 @@ TEST(GeometryUtilsTest, trilinearInterpolationXYZ)
     const real result = trilinearInterpolation(dx, dy, dz, kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, quantity);
     EXPECT_THAT(result, RealNear(0.5, 10e-5));
 }
+
+TEST(GeometryUtilsTest, getNeighborIndices)
+{
+    const uint kMMM = 0;
+    const uint neighborX[8] = {1, 100, 3, 100, 5, 100, 7, 100};
+    const uint neighborY[8] = {2, 3, 200, 200, 6, 7, 200, 200};
+    const uint neighborZ[8] = {4, 5, 6, 7, 300, 300, 300, 300};
+    uint kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP;
+    getNeighborIndicesOfBSW(kMMM, kPMM, kMPM, kMMP, kPPM, kPMP, kMPP, kPPP, neighborX, neighborY, neighborZ);
+}
+
+TEST(GeometryUtilsTest, findNearestCell)
+{
+    const uint startIndex = 0;
+    const real coordsX[8] = {0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0};
+    const real coordsY[8] = {0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
+    const real coordsZ[8] = {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
+    const real posX = 0.5, posY = 0.5, posZ = 0.5;
+    const uint neighborX[8] = {1, 100, 3, 100, 5, 100, 7, 100};
+    const uint neighborY[8] = {2, 3, 200, 200, 6, 7, 200, 200};
+    const uint neighborZ[8] = {4, 5, 6, 7, 300, 300, 300, 300};
+    const uint neighborBSW[8] = {400, 400, 400, 400, 400, 400, 400, 0};
+    const uint result = findNearestCellBSW(startIndex, coordsX, coordsY, coordsZ, posX, posY, posZ, neighborX, neighborY, neighborZ, neighborBSW);
+    EXPECT_THAT(result, 0);
+}
 //! \}
