@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder -->
 # Review Merge Request
 
 This document describes the process of reviewing a merge request in VirtualFluids. The review process is an important part of the development process. The review process ensures that the code changes are correct, documented, and tested. We follow a 4-eye principle, which means that every merge request needs to be reviewed by at least one other developer. Thereby the knowledge of the code is spread among the developers and the code quality is improved.

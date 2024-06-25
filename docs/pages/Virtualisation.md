@@ -32,4 +32,3 @@ docker image push --all-tags git.rz.tu-bs.de:4567/irmb/virtualfluids/ubuntu22_04
 
 Afterwards one can check if the image is available [here](https://git.rz.tu-bs.de/irmb/VirtualFluids/container_registry/116).
 Then the new image can be used in the Gitlab CI jobs and the devcontainer for Visual Studio Code.
-
