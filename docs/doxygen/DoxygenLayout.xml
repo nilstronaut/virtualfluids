@@ -15,7 +15,7 @@
         <tab type="user" url="@ref regression-tests" visible="yes" title="Regression Tests" intro=""/>
         <tab type="user" url="@ref performance-tests" visible="yes" title="Performance Tests" intro=""/>
         <tab type="user" url="@ref how-to-document-code" visible="yes" title="How To Document Code" intro=""/>
-        <tab type="user" url="@ref review" visible="yes" title="Review Merge Request" intro=""/>
+        <tab type="user" url="@ref review-merge-request" visible="yes" title="Review Merge Request" intro=""/>
         <tab type="user" url="@ref release" visible="yes" title="Release" intro=""/>
         <tab type="user" url="@ref how-to-license" visible="yes" title="How to License" intro=""/>
         <tab type="user" url="@ref virtualisation" visible="yes" title="Virtualisation" intro=""/>
