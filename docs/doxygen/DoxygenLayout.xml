@@ -18,7 +18,7 @@
         <tab type="user" url="@ref review-merge-request" visible="yes" title="Review Merge Request" intro=""/>
         <tab type="user" url="@ref release" visible="yes" title="Release" intro=""/>
         <tab type="user" url="@ref how-to-license" visible="yes" title="How to License" intro=""/>
-        <tab type="user" url="@ref virtualisation" visible="yes" title="Virtualisation" intro=""/>
+        <tab type="user" url="@ref docker-virtualisation" visible="yes" title="Virtualisation" intro=""/>
         <tab type="user" url="@ref gitlab-ci" visible="yes" title="GitLab CI" intro=""/>
         <tab type="usergroup" title="Coding Guidelines" url="@ref coding-guidelines">
             <tab type="user" url="@ref layout" visible="yes" title="Layout" intro=""/>
