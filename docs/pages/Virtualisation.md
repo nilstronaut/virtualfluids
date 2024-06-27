@@ -12,7 +12,13 @@ Every user of VirtualFluids can use the Dockerfile to create a new Docker image.
 The devcontainer for Visual Studio Code and most oft the GitLab-CI jobs are based on the prebuild Docker image.
 
 ## Update the prebuild image
-To update the prebuild image one need to have at least Maintainer rights in the Gitlab project. Additionally, at this point in time it is only possible to push to the registry from our Gitlab Runner!!
+To update the prebuild image one need to have at least Maintainer rights in the Gitlab project. Additionally, at this point in time it is only possible to push to the registry from our Linux Gitlab Runner!!
+
+First login to the Gitlab registry with the following command:
+```bash
+docker login git.rz.tu-bs.de:4567
+```
+To authenticate you need a personal access token. The token can be created in the Gitlab settings under `Access Tokens`. The token needs the `read_registry` and `write_registry` scope.
 
 A new image with the tag name `vf_base' can be created from the Containers folder with the following command:
 ```bash
