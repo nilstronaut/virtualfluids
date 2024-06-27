@@ -78,12 +78,10 @@ option(VF_RANGECHECK "Enable rangecheck in Release, if VF_NO_RANGECHECK is OFF" 
 include(CMake/ProjectSettings.cmake)
 include(CMake/Packages.cmake)
 
-
 add_subdirectory(src/logger)
 add_subdirectory(src/basics)
 add_subdirectory(src/parallel)
 add_subdirectory(src/lbm)
-
 
 if(VF_ENABLE_CPU)
     include(cpu.cmake)
