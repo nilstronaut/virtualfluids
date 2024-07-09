@@ -256,7 +256,7 @@ void D3Q27Interactor::updateInteractor(const real &timestep)
         if (block->isNotActive() || !block)
             continue;
 
-        SPtr<ILBMKernel> kernel = block->getKernel();
+        SPtr<LBMKernel> kernel = block->getKernel();
         SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
         set<std::vector<int>>::iterator setPos;
@@ -305,7 +305,7 @@ bool D3Q27Interactor::setDifferencesToGbObject3D(const SPtr<Block3D> block)
     bool gotQs         = false;
     SPtr<BoundaryConditions> bc;
 
-    SPtr<ILBMKernel> kernel = block->getKernel();
+    SPtr<LBMKernel> kernel = block->getKernel();
     SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
     real internX1, internX2, internX3;
@@ -585,7 +585,7 @@ void D3Q27Interactor::addQsLineSet(std::vector<UbTupleFloat3> &nodes, std::vecto
         real dx               = grid.lock()->getDeltaX(block);
         UbTupleDouble3 orgDelta = grid.lock()->getNodeOffset(block);
 
-        SPtr<ILBMKernel> kernel = block->getKernel();
+        SPtr<LBMKernel> kernel = block->getKernel();
         SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
         map<SPtr<Block3D>, set<std::vector<int>>>::iterator pos = bcNodeIndicesMap.find(block);
@@ -781,7 +781,7 @@ vector<pair<GbPoint3D, GbPoint3D>> D3Q27Interactor::getQsLineSet()
     int blocknx3 = val<3>(blocknx);
 
     for (SPtr<Block3D> block : bcBlocks) {
-        SPtr<ILBMKernel> kernel   = block->getKernel();
+        SPtr<LBMKernel> kernel   = block->getKernel();
         SPtr<BCArray3D> bcMatrix  = kernel->getBCSet()->getBCArray();
         UbTupleDouble3 nodeOffset = grid.lock()->getNodeOffset(block);
 

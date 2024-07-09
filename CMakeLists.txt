@@ -32,9 +32,9 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 project(
     VirtualFluids
-    VERSION 0.1.1
+    VERSION 0.1.2
     DESCRIPTION "CFD code based on the Lattice Boltzmann Method"
-    HOMEPAGE_URL "https://www.tu-braunschweig.de/irmb/forschung/virtualfluids"
+    HOMEPAGE_URL "https://git.rz.tu-bs.de/irmb/VirtualFluids"
     LANGUAGES CXX)
 
 #############################################################
@@ -68,18 +68,20 @@ option(VF_ENABLE_SANITIZER_LEAK "Enable leak sanitizer" OFF)
 option(VF_ENABLE_SANITIZER_THREAD "Enable thread sanitizer" OFF)
 option(VF_ENABLE_SANITIZER_MEMORY "Enable memory sanitizer" OFF)
 
+# rangecheck
+option(VF_NO_RANGECHECK "Disable rangecheck in Debug" OFF)
+option(VF_RANGECHECK "Enable rangecheck in Release, if VF_NO_RANGECHECK is OFF" OFF)
+
 #############################################################
 ###                  Libraries                            ###
 #############################################################
 include(CMake/ProjectSettings.cmake)
 include(CMake/Packages.cmake)
 
-
 add_subdirectory(src/logger)
 add_subdirectory(src/basics)
 add_subdirectory(src/parallel)
 add_subdirectory(src/lbm)
-
 
 if(VF_ENABLE_CPU)
     include(cpu.cmake)

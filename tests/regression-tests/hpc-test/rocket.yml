@@ -6,16 +6,16 @@ user: $PHOENIX_REMOTE_USER
 private_keyfile: $PHOENIX_PRIVATE_KEY
 
 copy:
-  - from: regression-tests/hpc-test/test.job.sh
+  - from: tests/regression-tests/hpc-test/test.job.sh
     to: virtualfluids-mpich-bind/test.job
     overwrite: true
 
-  - from: regression-tests/hpc-test/Rockylinux9.sif
+  - from: tests/regression-tests/hpc-test/Rockylinux9.sif
     to: virtualfluids-mpich-bind/Rockylinux9.sif
     overwrite: true
 
-  - from: apps/cpu/FlowAroundCylinder/cylinder.cfg
-    to: virtualfluids-mpich-bind/cylinder.cfg
+  - from: apps/cpu/LidDrivenCavity/LidDrivenCavity_regression_test.cfg
+    to: virtualfluids-mpich-bind/LidDrivenCavity_regression_test.cfg
     overwrite: true
 
 collect:

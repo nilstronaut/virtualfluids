@@ -33,9 +33,10 @@
 //=======================================================================================
 #include <gmock/gmock.h>
 
-#include <gpu/core/Output/NeighborDebugWriter.hpp>
+#include <gpu/core/Output/NeighborDebugWriter.h>
 
 #include "../Utilities/testUtilitiesGPU.h"
+#include "WbWriter.h"
 
 class WbWriterVtkXmlBinarySpy : public WbWriter
 {
@@ -88,7 +89,7 @@ TEST_F(NeighborDebugWriterTest, writeNeighborLinkLines_onlyFLuidNodes_writesAllN
     std::vector<UbTupleFloat3> expectedNodes = { oneCoord, threeCoord, oneCoord, threeCoord, threeCoord, threeCoord };
     std::vector<UbTupleInt2> expectedLines = { UbTupleInt2(0, 1), UbTupleInt2(2, 3), UbTupleInt2(4, 5) };
 
-    NeighborDebugWriter::writeNeighborLinkLines(parH.get(), direction, "name", &writerSpy);
+    NeighborDebugWriter::writeNeighborLinkLinesForDirection(parH.get(), direction, "name", &writerSpy);
 
     EXPECT_THAT(writerSpy.nodes.size(), testing::Eq(numberOfNodes * 2));
     EXPECT_THAT(writerSpy.lines.size(), testing::Eq(numberOfNodes));
@@ -105,7 +106,7 @@ TEST_F(NeighborDebugWriterTest, writeNeighborLinkLines_fluidAndSolidNodes_writes
     std::vector<UbTupleFloat3> expectedNodes = { oneCoord, threeCoord, oneCoord, threeCoord};
     std::vector<UbTupleInt2> expectedLines = { UbTupleInt2(0, 1), UbTupleInt2(2, 3)};
 
-    NeighborDebugWriter::writeNeighborLinkLines(parH.get(), direction, "name", &writerSpy);
+    NeighborDebugWriter::writeNeighborLinkLinesForDirection(parH.get(), direction, "name", &writerSpy);
 
     EXPECT_THAT(writerSpy.nodes.size(), testing::Eq((numberOfNodes-1) * 2));
     EXPECT_THAT(writerSpy.lines.size(), testing::Eq(numberOfNodes-1));

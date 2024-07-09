@@ -33,6 +33,8 @@
 #ifndef LBM_D3Q27_H
 #define LBM_D3Q27_H
 
+#include <map>
+
 #include <basics/DataTypes.h>
 
 namespace vf::lbm::dir
@@ -68,6 +70,17 @@ static constexpr size_t dPPM = 23;
 static constexpr size_t dMPM = 24;
 static constexpr size_t dPMM = 25;
 static constexpr size_t dMMM = 26;
+
+#define NAME_OF(direction) #direction
+static const std::map<size_t, std::string> directionNames {
+    { d000, NAME_OF(d000) }, { dP00, NAME_OF(dP00) }, { dM00, NAME_OF(dM00) }, { d0P0, NAME_OF(d0P0) },
+    { d0M0, NAME_OF(d0M0) }, { d00P, NAME_OF(d00P) }, { d00M, NAME_OF(d00M) }, { dPP0, NAME_OF(dPP0) },
+    { dMM0, NAME_OF(dMM0) }, { dPM0, NAME_OF(dPM0) }, { dMP0, NAME_OF(dMP0) }, { dP0P, NAME_OF(dP0P) },
+    { dM0M, NAME_OF(dM0M) }, { dP0M, NAME_OF(dP0M) }, { dM0P, NAME_OF(dM0P) }, { d0PP, NAME_OF(d0PP) },
+    { d0MM, NAME_OF(d0MM) }, { d0PM, NAME_OF(d0PM) }, { d0MP, NAME_OF(d0MP) }, { dPPP, NAME_OF(dPPP) },
+    { dMPP, NAME_OF(dMPP) }, { dPMP, NAME_OF(dPMP) }, { dMMP, NAME_OF(dMMP) }, { dPPM, NAME_OF(dPPM) },
+    { dMPM, NAME_OF(dMPM) }, { dPMM, NAME_OF(dPMM) }, { dMMM, NAME_OF(dMMM) },
+};
 
 static constexpr size_t iP00 = dM00;
 static constexpr size_t iM00 = dP00;
@@ -124,24 +137,24 @@ static constexpr size_t eMMP = 12;
 static constexpr size_t ePPM = 12;
 
 static constexpr unsigned long int et000 = 1;
-static constexpr unsigned long int etP00 = 2;      
-static constexpr unsigned long int etM00 = 4;      
-static constexpr unsigned long int et0P0 = 8;      
-static constexpr unsigned long int et0M0 = 16;     
-static constexpr unsigned long int et00P = 32;     
-static constexpr unsigned long int et00M = 64;     
-static constexpr unsigned long int etPP0 = 128;    
-static constexpr unsigned long int etMM0 = 256;    
-static constexpr unsigned long int etPM0 = 512;    
-static constexpr unsigned long int etMP0 = 1024;   
-static constexpr unsigned long int etP0P = 2048;   
-static constexpr unsigned long int etM0M = 4096;   
-static constexpr unsigned long int etP0M = 8192;   
-static constexpr unsigned long int etM0P = 16384;  
-static constexpr unsigned long int et0PP = 32768;  
-static constexpr unsigned long int et0MM = 65536;  
-static constexpr unsigned long int et0PM = 131072; 
-static constexpr unsigned long int et0MP = 262144; 
+static constexpr unsigned long int etP00 = 2;
+static constexpr unsigned long int etM00 = 4;
+static constexpr unsigned long int et0P0 = 8;
+static constexpr unsigned long int et0M0 = 16;
+static constexpr unsigned long int et00P = 32;
+static constexpr unsigned long int et00M = 64;
+static constexpr unsigned long int etPP0 = 128;
+static constexpr unsigned long int etMM0 = 256;
+static constexpr unsigned long int etPM0 = 512;
+static constexpr unsigned long int etMP0 = 1024;
+static constexpr unsigned long int etP0P = 2048;
+static constexpr unsigned long int etM0M = 4096;
+static constexpr unsigned long int etP0M = 8192;
+static constexpr unsigned long int etM0P = 16384;
+static constexpr unsigned long int et0PP = 32768;
+static constexpr unsigned long int et0MM = 65536;
+static constexpr unsigned long int et0PM = 131072;
+static constexpr unsigned long int et0MP = 262144;
 static constexpr unsigned long int etPPP = 524288;
 static constexpr unsigned long int etMPP = 1048576;
 static constexpr unsigned long int etPMP = 2097152;
@@ -150,7 +163,6 @@ static constexpr unsigned long int etPPM = 8388608;
 static constexpr unsigned long int etMPM = 16777216;
 static constexpr unsigned long int etPMM = 33554432;
 static constexpr unsigned long int etMMM = 67108864;
- 
 
 } // namespace vf::lbm::dir
 #endif

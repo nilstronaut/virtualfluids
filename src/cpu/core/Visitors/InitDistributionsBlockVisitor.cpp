@@ -152,7 +152,7 @@ void InitDistributionsBlockVisitor::visit(const SPtr<Grid3D> grid, SPtr<Block3D>
 
    if (blockRank == gridRank && block->isActive())
    {
-       SPtr<ILBMKernel> kernel = block->getKernel();
+       SPtr<LBMKernel> kernel = block->getKernel();
       if (!kernel)
          throw UbException(UB_EXARGS, "The LBM kernel isn't exist in block: "+block->toString());
 

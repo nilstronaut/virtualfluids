@@ -44,7 +44,7 @@
 #include "BC.h"
 #include "Block3D.h"
 #include "BCArray3D.h"
-#include "ILBMKernel.h"
+#include "LBMKernel.h"
 
 BoundaryConditionsBlockVisitor::BoundaryConditionsBlockVisitor() : Block3DVisitor(0, D3Q27System::MAXLEVEL)
 {
@@ -55,7 +55,7 @@ BoundaryConditionsBlockVisitor::~BoundaryConditionsBlockVisitor() = default;
 void BoundaryConditionsBlockVisitor::visit(SPtr<Grid3D> grid, SPtr<Block3D> block)
 {
     if (block->getRank() == grid->getRank()) {
-        SPtr<ILBMKernel> kernel = block->getKernel();
+        SPtr<LBMKernel> kernel = block->getKernel();
 
         if (!kernel) {
             throw UbException(UB_EXARGS, "LBMKernel in " + block->toString() + "is not exist!");

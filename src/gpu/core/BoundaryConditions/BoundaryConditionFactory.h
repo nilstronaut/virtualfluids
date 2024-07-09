@@ -48,6 +48,7 @@ struct LBMSimulationParameter;
 class Parameter;
 
 using boundaryCondition = std::function<void(LBMSimulationParameter *, QforBoundaryConditions *)>;
+using boundaryConditionDirectional = std::function<void(LBMSimulationParameter *, QforDirectionalBoundaryCondition *)>;
 using boundaryConditionWithParameter = std::function<void(Parameter *, QforBoundaryConditions *, const int level)>;
 using precursorBoundaryConditionFunc = std::function<void(LBMSimulationParameter *, QforPrecursorBoundaryConditions *, real timeRatio, real velocityRatio)>;
 
@@ -153,11 +154,12 @@ public:
     [[nodiscard]] virtual boundaryCondition getVelocityBoundaryConditionPost(bool isGeometryBC = false) const;
     [[nodiscard]] boundaryCondition getNoSlipBoundaryConditionPost(bool isGeometryBC = false) const;
     [[nodiscard]] boundaryCondition getSlipBoundaryConditionPost(bool isGeometryBC = false) const;
-    [[nodiscard]] boundaryCondition getPressureBoundaryConditionPre() const;
     [[nodiscard]] boundaryCondition getGeometryBoundaryConditionPost() const;
-
+    [[nodiscard]] virtual std::variant<boundaryCondition, boundaryConditionDirectional> getPressureBoundaryConditionPre() const;
     [[nodiscard]] boundaryConditionWithParameter getStressBoundaryConditionPost() const;
     [[nodiscard]] precursorBoundaryConditionFunc getPrecursorBoundaryConditionPost() const;
+
+    [[nodiscard]] virtual bool hasDirectionalPressureBoundaryCondition() const;
 
 private:
     VelocityBC velocityBoundaryCondition = VelocityBC::NotSpecified;

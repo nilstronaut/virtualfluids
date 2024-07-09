@@ -30,6 +30,6 @@
 #  SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
 #
 #=======================================================================================
-PROJECT(SphereMultiGPU LANGUAGES CXX)
+PROJECT(SphereMultiGPU)
 
-vf_add_executable(PRIVATE_LINK basics gpu_core GridGenerator FILES SphereMultiGPU.cpp)
+vf_add_executable(PRIVATE_LINK gpu_core)

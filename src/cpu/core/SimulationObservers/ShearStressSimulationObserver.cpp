@@ -170,7 +170,7 @@ void ShearStressSimulationObserver::calculateShearStress(real timeStep)
             SPtr<Block3D> block                             = t.first;
             std::set<std::vector<int>> &transNodeIndicesSet = t.second;
 
-            SPtr<ILBMKernel> kernel                 = block->getKernel();
+            SPtr<LBMKernel> kernel                 = block->getKernel();
             SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
             SPtr<ShearStressValuesArray3D> ssv      = kernel->getDataSet()->getShearStressValues();
@@ -288,7 +288,7 @@ void ShearStressSimulationObserver::addData()
             UbTupleDouble3 nodeOffset = grid->getNodeOffset(block);
             real dx                 = grid->getDeltaX(block);
 
-            SPtr<ILBMKernel> kernel                 = block->getKernel();
+            SPtr<LBMKernel> kernel                 = block->getKernel();
             SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
             SPtr<ShearStressValuesArray3D> ssv      = kernel->getDataSet()->getShearStressValues();
@@ -401,7 +401,7 @@ void ShearStressSimulationObserver::resetData(real /*step*/)
                 //            UbTupleDouble3 nodeOffset   = grid->getNodeOffset(block);
                 //            double         dx           = grid->getDeltaX(block);
 
-                SPtr<ILBMKernel> kernel                 = block->getKernel();
+                SPtr<LBMKernel> kernel                 = block->getKernel();
                 SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                 SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                 SPtr<ShearStressValuesArray3D> ssv      = kernel->getDataSet()->getShearStressValues();
@@ -454,7 +454,7 @@ void ShearStressSimulationObserver::findPlane(int ix1, int ix2, int ix3, SPtr<Gr
     real x3plane = c0o1, y3plane = c0o1, z3plane = c0o1;
     SPtr<BoundaryConditions> bcPtr;
     real dx                               = grid->getDeltaX(block);
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     bcPtr                                   = bcArray->getBC(ix1, ix2, ix3);
@@ -891,7 +891,7 @@ void ShearStressSimulationObserver::initDistance()
             //         UbTupleDouble3 nodeOffset   = grid->getNodeOffset(block);
             //         double         dx           = grid->getDeltaX(block);
 
-            SPtr<ILBMKernel> kernel                 = block->getKernel();
+            SPtr<LBMKernel> kernel                 = block->getKernel();
             SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
             SPtr<ShearStressValuesArray3D> ssv      = kernel->getDataSet()->getShearStressValues();

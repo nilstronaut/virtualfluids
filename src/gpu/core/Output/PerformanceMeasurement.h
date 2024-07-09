@@ -44,10 +44,19 @@ class Parameter;
 class PerformanceMeasurement
 {
 public:
-    void print(vf::basics::Timer& timer, uint timestep, Parameter* para, vf::parallel::Communicator& communicator);
+    PerformanceMeasurement(const Parameter& para);
+
+    double getNups() const;
+    double totalRuntimeInSeconds() const;
+    void log(vf::basics::Timer& timer, uint timestep, vf::parallel::Communicator& communicator);
 
 private:
+    double totalNumberOfNodes { 0 };
+    double totalNumberOfNodesCorrected { 0 };
+    double timestepStart { 0 };
+
     double totalTime { 0. };
+    double nups { 0. };
     bool firstOutput { true };
 };
 

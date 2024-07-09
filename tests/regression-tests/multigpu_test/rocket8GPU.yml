@@ -6,48 +6,48 @@ private_keyfile: $PHOENIX_PRIVATE_KEY
 
 copy:
   - from: "CMake/"
-    to: "multigpu_test/CMake/"
+    to: "multigpu_test_8_gpu/CMake/"
     overwrite: true
 
   - from: "3rdParty/"
-    to: "multigpu_test/3rdParty/"
+    to: "multigpu_test_8_gpu/3rdParty/"
     overwrite: true
 
   - from: "CMakeLists.txt"
-    to: "multigpu_test/CMakeLists.txt"
+    to: "multigpu_test_8_gpu/CMakeLists.txt"
     overwrite: true
 
   - from: "gpu.cmake"
-    to: "multigpu_test/gpu.cmake"
+    to: "multigpu_test_8_gpu/gpu.cmake"
     overwrite: true
 
   - from: "src/"
-    to: "multigpu_test/src/"
+    to: "multigpu_test_8_gpu/src/"
     overwrite: true
 
   - from: "CMakePresets.json"
-    to: "multigpu_test/CMakePresets.json"
+    to: "multigpu_test_8_gpu/CMakePresets.json"
     overwrite: true
 
   - from: "apps/gpu/"
-    to: "multigpu_test/apps/gpu/"
+    to: "multigpu_test_8_gpu/apps/gpu/"
     overwrite: true
 
 collect:
-  - from: multigpu_test/output/8GPU/
+  - from: multigpu_test_8_gpu/output/8GPU/
     to: output/8GPU/
     overwrite: true
 
-  - from: multigpu_test/slurm8GPU.out
+  - from: multigpu_test_8_gpu/slurm8GPU.out
     to: output/8GPU/slurm8GPU.out
     overwrite: true
 
 clean:
-  - multigpu_test/*
+  - multigpu_test_8_gpu/*
 
 sbatch:
-  script: multigpu_test/slurm8GPU.job
-  from: regression-tests/multigpu_test/slurm8GPU.job
+  script: multigpu_test_8_gpu/slurm8GPU.job
+  from: tests/regression-tests/multigpu_test/slurm8GPU.job
   overwrite: true
 
 continue_if_job_fails: true

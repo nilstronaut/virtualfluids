@@ -242,4 +242,73 @@ TEST_F(CylinderTestAxisNormalToZ, changeSizeByDelta)
     testChangeSizeByDelta(cylinder);
 }
 
+// Test alternative constructor that constructs the cylinder from the coordinates of its axis and a radius ////////////////////////////////////////////////
+
+TEST(CylinderTest, constructCylinderFromAxisCoordinatesAlongX)
+{
+    const std::array<double, 3> minCoordinatesAxis = { -1, 22, 33 };
+    const std::array<double, 3> maxCoordinatesAxis = {  1, 22, 33 };
+    const double radius = 11;
+
+    const auto cylinder = Cylinder(minCoordinatesAxis, maxCoordinatesAxis, radius);
+
+    EXPECT_THAT(cylinder.getHeight(), testing::Eq(2));
+    EXPECT_THAT(cylinder.getRotationalAxis(), testing::Eq(Axis::x));
+    EXPECT_THAT(cylinder.getRadius(), testing::Eq(radius));
+    EXPECT_THAT(cylinder.getX1Centroid(), testing::Eq(0));
+    EXPECT_THAT(cylinder.getX2Centroid(), testing::Eq(22));
+    EXPECT_THAT(cylinder.getX3Centroid(), testing::Eq(33));
+}
+
+TEST(CylinderTest, constructCylinderFromAxisCoordinatesAlongY)
+{
+    const std::array<double, 3> minCoordinatesAxis = { 22, 15, 33 };
+    const std::array<double, 3> maxCoordinatesAxis = { 22, 16, 33 };
+    const double radius = 11;
+
+    const auto cylinder = Cylinder(minCoordinatesAxis, maxCoordinatesAxis, radius);
+
+    EXPECT_THAT(cylinder.getHeight(), testing::Eq(1));
+    EXPECT_THAT(cylinder.getRotationalAxis(), testing::Eq(Axis::y));
+    EXPECT_THAT(cylinder.getRadius(), testing::Eq(radius));
+    EXPECT_THAT(cylinder.getX1Centroid(), testing::Eq(22));
+    EXPECT_THAT(cylinder.getX2Centroid(), testing::Eq(15.5));
+    EXPECT_THAT(cylinder.getX3Centroid(), testing::Eq(33));
+}
+
+TEST(CylinderTest, constructCylinderFromAxisCoordinatesAlongZ)
+{
+    // swapped min and max works too
+    const std::array<double, 3> minCoordinatesAxis = { 22, 33, -5 };
+    const std::array<double, 3> maxCoordinatesAxis = { 22, 33, -7 };
+    const double radius = 11;
+
+    const auto cylinder = Cylinder(minCoordinatesAxis, maxCoordinatesAxis, radius);
+
+    EXPECT_THAT(cylinder.getHeight(), testing::Eq(2));
+    EXPECT_THAT(cylinder.getRotationalAxis(), testing::Eq(Axis::z));
+    EXPECT_THAT(cylinder.getRadius(), testing::Eq(radius));
+    EXPECT_THAT(cylinder.getX1Centroid(), testing::Eq(22));
+    EXPECT_THAT(cylinder.getX2Centroid(), testing::Eq(33));
+    EXPECT_THAT(cylinder.getX3Centroid(), testing::Eq(-6));
+}
+
+TEST(CylinderTest, constructCylinderFromAxis_NotParallelToAxis_Throws)
+{
+    const std::array<double, 3> minCoordinatesAxis = { 0, 1, -5 };
+    const std::array<double, 3> maxCoordinatesAxis = { 0, 3, -7 };
+    const double radius = 11;
+
+    EXPECT_THROW(Cylinder(minCoordinatesAxis, maxCoordinatesAxis, radius), std::runtime_error);
+}
+
+
+TEST(CylinderTest, constructCylinderFromAxis_AxisLengthIsZero_Throws)
+{
+    const std::array<double, 3> minCoordinatesAxis = { 0, 0, 0 };
+    const std::array<double, 3> maxCoordinatesAxis = { 0, 0, 0 };
+    const double radius = 11;
+
+    EXPECT_THROW(Cylinder(minCoordinatesAxis, maxCoordinatesAxis, radius), std::runtime_error);
+}
 //! \}

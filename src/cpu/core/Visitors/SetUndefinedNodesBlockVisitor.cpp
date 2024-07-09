@@ -39,7 +39,7 @@
 #include "D3Q27System.h"
 #include "Grid3D.h"
 #include "D3Q27System.h"
-#include "ILBMKernel.h"
+#include "LBMKernel.h"
 
 SetUndefinedNodesBlockVisitor::SetUndefinedNodesBlockVisitor(bool twoTypeOfConnectorsCheck)
     : Block3DVisitor(0, D3Q27System::MAXLEVEL), twoTypeOfConnectorsCheck(twoTypeOfConnectorsCheck)
@@ -53,7 +53,7 @@ void SetUndefinedNodesBlockVisitor::visit(SPtr<Grid3D> grid, SPtr<Block3D> block
     if (!block->hasInterpolationFlag())
         return;
 
-    SPtr<ILBMKernel> kernel = block->getKernel();
+    SPtr<LBMKernel> kernel = block->getKernel();
 
     if (!kernel && (block->getRank() != grid->getRank()))
         return;

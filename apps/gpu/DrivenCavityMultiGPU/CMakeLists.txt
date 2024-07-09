@@ -30,6 +30,6 @@
 #  SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
 #
 #=======================================================================================
-PROJECT(DrivenCavityMultiGPU LANGUAGES CXX)
+PROJECT(DrivenCavityMultiGPU)
 
-vf_add_executable(PRIVATE_LINK basics gpu_core GridGenerator FILES DrivenCavityMultiGPU.cpp)
+vf_add_executable(PRIVATE_LINK gpu_core)

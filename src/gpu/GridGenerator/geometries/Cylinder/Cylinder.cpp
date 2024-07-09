@@ -31,6 +31,7 @@
 //! \{
 //=======================================================================================
 #include "Cylinder.h"
+#include "UbEqual.h"
 #include <numeric>
 
 using namespace axis;
@@ -43,6 +44,36 @@ Cylinder::Cylinder(double centerX, double centerY, double centerZ, double radius
 Cylinder::Cylinder(std::array<double, 3> center, double radius, double height, Axis axis)
     : center(center), radius(radius), height(height), rotationalAxis(axis)
 {
+}
+
+Cylinder::Cylinder(std::array<double, 3> minOfAxis, std::array<double, 3> maxOfAxis, double radius)
+    : center(calculateCenter(minOfAxis, maxOfAxis)), radius(radius)
+{
+    std::array<double, 3> differencesBetweenAxisCoords;
+    std::transform(maxOfAxis.begin(), maxOfAxis.end(), minOfAxis.begin(), differencesBetweenAxisCoords.begin(),
+                   std::minus<>());
+
+    std::function isNotZero = [](double number) { return !isUbEqual<double, double>(number, 0.); };
+
+    // when the cylinder is parallel to an axis, the difference between min and max is non-zero in exactly one direction
+    const int countWhereDifferenceExists =
+        std::count_if(differencesBetweenAxisCoords.begin(), differencesBetweenAxisCoords.end(), isNotZero);
+    if (countWhereDifferenceExists != 1) {
+        throw std::runtime_error("The cylinder is not parallel to one axis. This is currently not supported");
+    }
+
+    this->rotationalAxis =
+        static_cast<Axis>(std::find_if(differencesBetweenAxisCoords.begin(), differencesBetweenAxisCoords.end(), isNotZero) -
+                          differencesBetweenAxisCoords.begin());
+    this->height = std::abs(differencesBetweenAxisCoords.at(rotationalAxis)); // absolute value to handle swapped min and max
+}
+
+std::array<double, 3> Cylinder::calculateCenter(const std::array<double, 3>& minOfAxis,
+                                                const std::array<double, 3>& maxOfAxis)
+{
+    return { 0.5 * (maxOfAxis[0] + minOfAxis[0]),
+             0.5 * (maxOfAxis[1] + minOfAxis[1]),
+             0.5 * (maxOfAxis[2] + minOfAxis[2]) };
 }
 
 SPtr<Object> Cylinder::clone() const

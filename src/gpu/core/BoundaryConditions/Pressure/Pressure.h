@@ -38,9 +38,9 @@
 
 struct LBMSimulationParameter;
 
-void PressureNonEquilibriumIncompressible(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition);
+void PressureNonEquilibriumIncompressible(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition);
 
-void PressureNonEquilibriumCompressible(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition);
+void PressureNonEquilibriumCompressible(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition);
 
 #endif
 

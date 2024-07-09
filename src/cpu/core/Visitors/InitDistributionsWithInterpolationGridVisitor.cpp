@@ -128,12 +128,12 @@ void InitDistributionsWithInterpolationGridVisitor::visit(SPtr<Grid3D> grid)
 //////////////////////////////////////////////////////////////////////////
 void InitDistributionsWithInterpolationGridVisitor::copyLocalBlock(SPtr<Block3D> oldBlock, SPtr<Block3D> newBlock)
 {
-    SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+    SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
     if (!oldKernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in block: " + oldBlock->toString());
     SPtr<EsoTwist3D> oldDistributions = dynamicPointerCast<EsoTwist3D>(oldKernel->getDataSet()->getFdistributions());
 
-    SPtr<ILBMKernel> kernel = newBlock->getKernel();
+    SPtr<LBMKernel> kernel = newBlock->getKernel();
     if (!kernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString());
     kernel->getDataSet()->setFdistributions(oldDistributions);
@@ -146,7 +146,7 @@ void InitDistributionsWithInterpolationGridVisitor::copyRemoteBlock(SPtr<Block3D
     int newBlockRank = newBlock->getRank();
 
     if (oldBlockRank == newGridRank && oldBlock->isActive()) {
-        SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+        SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
         if (!oldKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in block: " + oldBlock->toString());
         SPtr<EsoTwist3D> oldDistributions =
@@ -166,7 +166,7 @@ void InitDistributionsWithInterpolationGridVisitor::copyRemoteBlock(SPtr<Block3D
         MPI_Send(zeroDistributions->getStartAdressOfSortedArray(0, 0, 0),
                  (int)zeroDistributions->getDataVector().size(), MPI_DOUBLE, newBlockRank, 0, MPI_COMM_WORLD);
     } else if (newBlockRank == newGridRank && newBlock->isActive()) {
-        SPtr<ILBMKernel> newKernel = newBlock->getKernel();
+        SPtr<LBMKernel> newKernel = newBlock->getKernel();
         if (!newKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString() +
                                              UbSystem::toString(newGridRank));
@@ -207,7 +207,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateLocalBlockCoarseT
 
     iProcessor->setOmegas(omegaC, omegaF);
 
-    SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+    SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
     if (!oldKernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in old block: " + oldBlock->toString());
 
@@ -215,7 +215,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateLocalBlockCoarseT
 
     SPtr<BCArray3D> bcArrayOldBlock = oldBlock->getKernel()->getBCSet()->getBCArray();
 
-    SPtr<ILBMKernel> newKernel = newBlock->getKernel();
+    SPtr<LBMKernel> newKernel = newBlock->getKernel();
     if (!newKernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString());
 
@@ -296,7 +296,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateRemoteBlockCoarse
     int newBlockRank = newBlock->getRank();
 
     if (oldBlockRank == newGridRank) {
-        SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+        SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
         if (!oldKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in block: " + oldBlock->toString());
         SPtr<EsoTwist3D> oldDistributions =
@@ -329,7 +329,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateRemoteBlockCoarse
 
         iProcessor->setOmegas(omegaC, omegaF);
 
-        SPtr<ILBMKernel> newKernel = newBlock->getKernel();
+        SPtr<LBMKernel> newKernel = newBlock->getKernel();
         if (!newKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString());
 
@@ -441,7 +441,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateLocalBlockFineToC
 
     iProcessor->setOmegas(omegaC, omegaF);
 
-    SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+    SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
     if (!oldKernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in old block: " + oldBlock->toString());
 
@@ -449,7 +449,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateLocalBlockFineToC
 
     SPtr<BCArray3D> bcArrayOldBlock = oldBlock->getKernel()->getBCSet()->getBCArray();
 
-    SPtr<ILBMKernel> newKernel = newBlock->getKernel();
+    SPtr<LBMKernel> newKernel = newBlock->getKernel();
     if (!newKernel)
         throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString());
 
@@ -531,7 +531,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateRemoteBlockFineTo
     int newBlockRank = newBlock->getRank();
 
     if (oldBlockRank == newGridRank) {
-        SPtr<ILBMKernel> oldKernel = oldBlock->getKernel();
+        SPtr<LBMKernel> oldKernel = oldBlock->getKernel();
         if (!oldKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in block: " + oldBlock->toString());
         SPtr<EsoTwist3D> oldDistributions =
@@ -564,7 +564,7 @@ void InitDistributionsWithInterpolationGridVisitor::interpolateRemoteBlockFineTo
 
         iProcessor->setOmegas(omegaC, omegaF);
 
-        SPtr<ILBMKernel> newKernel = newBlock->getKernel();
+        SPtr<LBMKernel> newKernel = newBlock->getKernel();
         if (!newKernel)
             throw UbException(UB_EXARGS, "The LBM kernel isn't exist in new block: " + newBlock->toString());
 

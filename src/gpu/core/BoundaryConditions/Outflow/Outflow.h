@@ -38,9 +38,9 @@
 
 struct LBMSimulationParameter;
 
-void OutflowNonReflecting(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition);
+void OutflowNonReflecting(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition);
 
-void OutflowNonReflectingPressureCorrection(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition);
+void OutflowNonReflectingPressureCorrection(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition);
 
 #endif
 

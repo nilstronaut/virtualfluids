@@ -35,7 +35,7 @@
 #include "Block3D.h"
 #include "Grid3D.h"
 #include "D3Q27System.h"
-#include "ILBMKernel.h"
+#include "LBMKernel.h"
 #include "LBMSystem.h"
 
 ViscosityBlockVisitor::ViscosityBlockVisitor(real nu) : Block3DVisitor(0, D3Q27System::MAXLEVEL), nu(nu) {}

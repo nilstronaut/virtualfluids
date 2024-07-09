@@ -728,7 +728,7 @@ static inline real getBoundaryVelocityForDirection(const int &direction, const r
 /*=====================================================================*/
 static const int &getInvertDirection(const int &direction)
 {
-#ifdef _DEBUG
+#ifdef VF_DEBUG
  //   if (direction < STARTDIR || direction > ENDDIR)
      if (direction < FSTARTDIR || direction > FENDDIR)
        throw UbException(UB_EXARGS, "unknown direction");

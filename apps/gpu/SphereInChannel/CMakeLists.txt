@@ -30,9 +30,9 @@
 #  SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
 #
 #=======================================================================================
-PROJECT(SphereInChannel LANGUAGES CUDA CXX)
+PROJECT(SphereInChannel)
 
-vf_add_executable(PRIVATE_LINK basics gpu_core GridGenerator FILES SphereInChannel.cpp)
+vf_add_executable(PRIVATE_LINK gpu_core)
 
 set_source_files_properties(SphereInChannel.cpp PROPERTIES LANGUAGE CUDA)
 

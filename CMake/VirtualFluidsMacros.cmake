@@ -81,6 +81,8 @@ function(vf_add_executable)
     cmake_parse_arguments( ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     vf_add_target(NAME ${ARG_NAME} BUILDTYPE binary PUBLIC_LINK ${ARG_PUBLIC_LINK} PRIVATE_LINK ${ARG_PRIVATE_LINK} FILES ${ARG_FILES} FOLDER ${ARG_FOLDER} EXCLUDE ${ARG_EXCLUDE} MODULEFOLDER ${ARG_MODULEFOLDER})
+
+    status("Executable: ${library_name} configured.")
 endfunction()
 
 
@@ -92,6 +94,8 @@ function(vf_add_library)
     cmake_parse_arguments( ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     vf_add_target(NAME ${ARG_NAME} PUBLIC_LINK ${ARG_PUBLIC_LINK} PRIVATE_LINK ${ARG_PRIVATE_LINK} FILES ${ARG_FILES} FOLDER ${ARG_FOLDER} EXCLUDE ${ARG_EXCLUDE})
+
+    status("Library: ${library_name} configured.")
 
     # add corresponding test subdirectory if available
     # test-target has to be located in under the same path as the library but in "test/unit-tests/" instead "src/"
@@ -128,7 +132,8 @@ function(vf_add_tests)
 
     # add the target to ctest
     gtest_add_tests(TARGET ${library_test_name})
-    
+
+    status("Test-Executable: ${library_test_name} configured.")
 endfunction()
 
 
@@ -192,8 +197,7 @@ function(vf_add_target)
         target_link_libraries(${library_name} PRIVATE ${ARG_PRIVATE_LINK})
     endif()
 
-    status("Target: ${library_name} (type=${ARG_BUILDTYPE}) configured.")
-
+    set(library_name ${library_name} PARENT_SCOPE)
 endfunction()
 
 #################################################################################

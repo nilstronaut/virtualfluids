@@ -49,6 +49,7 @@ public:
 
     Cylinder(double centerX, double centerY, double centerZ, double radius, double height, Axis rotationalAxis);
     Cylinder(std::array<double, 3> center, double radius, double height, Axis axis);
+    Cylinder(std::array<double, 3> minOfAxis, std::array<double, 3> maxOfAxis, double radius);
 
     SPtr<Object> clone() const override;
 
@@ -74,6 +75,8 @@ private:
     double getCentroidCoordinate(Axis coordinateDirection) const;
     double getMinimunCoordinate(Axis coordinateDirection) const;
     double getMaximumCoordinate(Axis coordinateDirection) const;
+
+    static std::array<double, 3> calculateCenter(const std::array<double, 3>& minOfAxis, const std::array<double, 3>& maxOfAxis);
 
     bool isInCircle(double delta1, double delta2, double offset) const;
 

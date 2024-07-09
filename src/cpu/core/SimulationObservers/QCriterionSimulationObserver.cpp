@@ -135,7 +135,7 @@ void QCriterionSimulationObserver::addData(const SPtr<Block3D> block)
     datanames.emplace_back("scaleFactor");
     data.resize(datanames.size());
 
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
 
@@ -240,7 +240,7 @@ void QCriterionSimulationObserver::getNeighborVelocities(int offx, int offy, int
 {
     using namespace vf::basics::constant;
     
-    SPtr<ILBMKernel> kernel = block->getKernel();
+    SPtr<LBMKernel> kernel = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
 
@@ -316,7 +316,7 @@ void QCriterionSimulationObserver::getNeighborVelocities(int offx, int offy, int
         ////compute distribution at neighboring nodes from neighboring blocks
 
         if (!checkInterpolation || neighNodeIsBC) {
-            SPtr<ILBMKernel> kernelW                 = blockNeighW->getKernel();
+            SPtr<LBMKernel> kernelW                 = blockNeighW->getKernel();
             SPtr<BCArray3D> bcArrayW                 = kernelW->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributionsW = kernelW->getDataSet()->getFdistributions();
             real fW2[27];
@@ -348,7 +348,7 @@ void QCriterionSimulationObserver::getNeighborVelocities(int offx, int offy, int
             vW[2] = v0[2] * c3o2 - vW[2] + c1o2 * vW2[2];
             // throw UbException(UB_EXARGS,"Parallel or Non-Uniform Simulation -- not yet implemented");
         } else {
-            SPtr<ILBMKernel> kernelW                 = blockNeighW->getKernel();
+            SPtr<LBMKernel> kernelW                 = blockNeighW->getKernel();
             SPtr<BCArray3D> bcArrayW                 = kernelW->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributionsW = kernelW->getDataSet()->getFdistributions();
             real fW[27];

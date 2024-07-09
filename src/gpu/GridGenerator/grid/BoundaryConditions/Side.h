@@ -78,6 +78,8 @@ public:
 
     std::array<real, 3> getNormal() const;
 
+    size_t getD3Q27Direction() const;
+
 protected:
     void addIndices(SPtr<Grid> grid, SPtr<gg::BoundaryCondition> boundaryCondition, std::string coord, real constant,
                            real startInner, real endInner, real startOuter, real endOuter);

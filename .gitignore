@@ -33,6 +33,7 @@ pythonbindings/pymuparser/*.cpython*
 output/
 logs/
 reference_data/
+reference_performance_tests/
 generated/
 coverage/
 
@@ -44,9 +45,6 @@ scripts/
 
 # stl files
 stl/
-
-# test data for regression tests
-test_data/
 
 # MacOS
 .DS_Store

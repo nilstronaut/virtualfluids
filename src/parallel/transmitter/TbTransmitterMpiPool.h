@@ -245,7 +245,7 @@ protected:
             UBLOG(logDEBUG5, "TbCbVectorMpiPool::sendDataOrder()"
                                  << " mpiRemoteRank=" << mpiRemoteRank << " mpiTag=" << mpiTag);
 
-#ifdef _DEBUG
+#ifdef VF_DEBUG
             orgPoolVectorStartPointer = &this->pool[0];
 #endif
         }
@@ -309,7 +309,7 @@ protected:
             counterReceiveDataOrder = 0;
             nofStoredVectors        = this->cbVectorMap.size();
 
-#ifdef _DEBUG
+#ifdef VF_DEBUG
             orgPoolVectorStartPointer = &this->pool[0];
 #endif
         }
@@ -371,7 +371,7 @@ protected:
 
             // synchronous send
             // comm.Ssend(&this->pool[0],(int)this->nextCbVectorStartIndexInPool, mpiDataType, mpiRemoteRank, mpiTag);
-#ifdef _DEBUG
+#ifdef VF_DEBUG
             if (this->orgPoolVectorStartPointer != &this->pool[0])
                 throw UbException(UB_EXARGS, "ups, pool array adress changed - unknown behavoir");
 #endif
@@ -399,7 +399,7 @@ protected:
         if (counterPrepareForReceive == this->nofStoredVectors) {
             UBLOG(logDEBUG5, "TbCbVectorMpiPool::prepareForReceiveData():start"
                                  << " mpiRemoteRank=" << mpiRemoteRank << " mpiTag=" << mpiTag);
-#ifdef _DEBUG
+#ifdef VF_DEBUG
             if (this->orgPoolVectorStartPointer != &this->pool[0])
                 throw UbException(UB_EXARGS, "ups, pool array adress changed - unknown behavoir");
 #endif
@@ -467,7 +467,7 @@ protected:
 
     int mpiRemoteRank, mpiTag;
 
-#ifdef _DEBUG
+#ifdef VF_DEBUG
     T *orgPoolVectorStartPointer;
 #endif
 };

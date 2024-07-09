@@ -31,19 +31,9 @@
 //! \{
 //! \author Henry Korb, Henrik Asmuth
 //=======================================================================================
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <exception>
-#include <iostream>
-#include <memory>
 #include <numeric>
-#include <string>
-#include <vector>
-
-//////////////////////////////////////////////////////////////////////////
 
 #include <basics/DataTypes.h>
-#include <basics/PointerDefinitions.h>
 #include <basics/config/ConfigurationFile.h>
 #include <basics/constants/NumericConstants.h>
 
@@ -53,35 +43,32 @@
 
 //////////////////////////////////////////////////////////////////////////
 
+#include "GridGenerator/TransientBCSetter/TransientBCSetter.h"
+#include "GridGenerator/geometries/BoundingBox/BoundingBox.h"
 #include "GridGenerator/geometries/Cuboid/Cuboid.h"
 #include "GridGenerator/grid/BoundaryConditions/BoundaryCondition.h"
 #include "GridGenerator/grid/BoundaryConditions/Side.h"
 #include "GridGenerator/grid/GridBuilder/LevelGridBuilder.h"
 #include "GridGenerator/grid/GridBuilder/MultipleGridBuilder.h"
-#include "GridGenerator/TransientBCSetter/TransientBCSetter.h"
-#include "GridGenerator/geometries/BoundingBox/BoundingBox.h"
 #include "GridGenerator/utilities/communication.h"
 
 //////////////////////////////////////////////////////////////////////////
 
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
-#include "gpu/core/DataStructureInitializer/GridProvider.h"
-#include "gpu/core/DataStructureInitializer/GridReaderGenerator/GridGenerator.h"
+#include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/Cuda/CudaMemoryManager.h"
 #include "gpu/core/GridScaling/GridScalingFactory.h"
 #include "gpu/core/Kernel/KernelTypes.h"
-#include "gpu/core/Calculation/Simulation.h"
-#include "gpu/core/Output/FileWriter.h"
 #include "gpu/core/Parameter/Parameter.h"
-#include "gpu/core/PreCollisionInteractor/PrecursorWriter.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PlanarAverageProbe.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PlaneProbe.h"
-#include "gpu/core/PreCollisionInteractor/Probes/WallModelProbe.h"
+#include "gpu/core/Samplers/PrecursorWriter.h"
+#include "gpu/core/Samplers/PlanarAverageProbe.h"
+#include "gpu/core/Samplers/Probe.h"
+#include "gpu/core/Samplers/WallModelProbe.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 using namespace vf::basics::constant;
+
+const std::string defaultConfigFile = "abl.cfg";
 
 void run(const vf::basics::ConfigurationFile& config)
 {
@@ -111,7 +98,7 @@ void run(const vf::basics::ConfigurationFile& config)
 
     const bool useDistributionsForPrecursor = config.getValue<bool>("UseDistributions", false);
     std::string precursorDirectory = config.getValue<std::string>("PrecursorDirectory", "precursor/");
-    if(precursorDirectory.back() != '/')
+    if (precursorDirectory.back() != '/')
         precursorDirectory += '/';
     const int timeStepsWritePrecursor = config.getValue<int>("nTimestepsWritePrecursor", 10);
     const real timeStartPrecursor = config.getValue<real>("tStartPrecursor", 36000.);
@@ -152,10 +139,6 @@ void run(const vf::basics::ConfigurationFile& config)
     const real pressureGradient = frictionVelocity * frictionVelocity / boundaryLayerHeight;
     const real pressureGradientLB = pressureGradient * (deltaT * deltaT) / deltaX;
 
-    // const uint timeStepStartOut = uint(timeStartOut / deltaT);
-    const uint timeStepOut = uint(timeOut / deltaT);
-    const uint timeStepEnd = uint(timeEnd / deltaT);
-
     const uint timeStepStartAveraging = uint(timeStartAveraging / deltaT);
     const uint timeStepStartTemporalAveraging = uint(timeStartTemporalAveraging / deltaT);
     const uint timeStepAveraging = uint(timeAveraging / deltaT);
@@ -191,18 +174,18 @@ void run(const vf::basics::ConfigurationFile& config)
     const bool isLastSubDomain = isMultiGPU && (processID == numberOfProcesses - 1);
     const bool isMidSubDomain = isMultiGPU && !(isFirstSubDomain || isLastSubDomain);
 
-    if (isFirstSubDomain){
+    if (isFirstSubDomain) {
         xGridMax += overlap;
     }
-    if (isFirstSubDomain && !usePrecursorInflow){
+    if (isFirstSubDomain && !usePrecursorInflow) {
         xGridMin -= overlap;
     }
 
-    if (isLastSubDomain){
+    if (isLastSubDomain) {
         xGridMin -= overlap;
     }
 
-    if (isLastSubDomain && !usePrecursorInflow){
+    if (isLastSubDomain && !usePrecursorInflow) {
         xGridMax += overlap;
     }
 
@@ -348,24 +331,21 @@ void run(const vf::basics::ConfigurationFile& config)
     //////////////////////////////////////////////////////////////////////////
     // add probes
     //////////////////////////////////////////////////////////////////////////
+    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
+
     if (!usePrecursorInflow && (isFirstSubDomain || !isMultiGPU)) {
         const auto planarAverageProbe = std::make_shared<PlanarAverageProbe>(
-            "planarAverageProbe", para->getOutputPath(), timeStepStartAveraging, timeStepStartTemporalAveraging, timeStepAveraging,
-            timeStepStartOutProbe, timeStepOutProbe, 'z');
+            para, cudaMemoryManager, para->getOutputPath(), "planarAverageProbe", timeStepStartAveraging,
+            timeStepStartTemporalAveraging, timeStepAveraging, timeStepStartOutProbe, timeStepOutProbe, PlanarAverageProbe::PlaneNormal::z, true);
         planarAverageProbe->addAllAvailableStatistics();
         planarAverageProbe->setFileNameToNOut();
-        para->addProbe(planarAverageProbe);
+        para->addSampler(planarAverageProbe);
 
         const auto wallModelProbe = std::make_shared<WallModelProbe>(
-            "wallModelProbe", para->getOutputPath(), timeStepStartAveraging, timeStepStartTemporalAveraging,
-            timeStepAveraging / 4, timeStepStartOutProbe, timeStepOutProbe);
+            para, cudaMemoryManager, para->getOutputPath(), "wallModelProbe", timeStepStartAveraging,
+            timeStepStartTemporalAveraging, timeStepAveraging / 4, timeStepStartOutProbe, timeStepOutProbe, false, true, true, para->getIsBodyForce());
 
-        wallModelProbe->addAllAvailableStatistics();
-        wallModelProbe->setFileNameToNOut();
-        wallModelProbe->setForceOutputToStress(true);
-        if (para->getIsBodyForce())
-            wallModelProbe->setEvaluatePressureGradient(true);
-        para->addProbe(wallModelProbe);
+        para->addSampler(wallModelProbe);
 
         para->setHasWallModelMonitor(true);
     }
@@ -373,27 +353,27 @@ void run(const vf::basics::ConfigurationFile& config)
     for (int iPlane = 0; iPlane < 3; iPlane++) {
         const std::string name = "planeProbe" + std::to_string(iPlane);
         const auto horizontalProbe =
-            std::make_shared<PlaneProbe>(name, para->getOutputPath(), timeStepStartAveraging, averagingTimestepsPlaneProbes,
-                                         timeStepStartOutProbe, timeStepOutProbe);
-        horizontalProbe->setProbePlane(c0o1, c0o1, iPlane * lengthZ / c4o1, lengthX, lengthY, deltaX);
+            std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), name, timeStepStartAveraging,
+                                         averagingTimestepsPlaneProbes, timeStepStartOutProbe, timeStepOutProbe, false, false);
+        horizontalProbe->addProbePlane(c0o1, c0o1, iPlane * lengthZ / c4o1, lengthX, lengthY, deltaX);
         horizontalProbe->addAllAvailableStatistics();
-        para->addProbe(horizontalProbe);
+        para->addSampler(horizontalProbe);
     }
 
-    auto crossStreamPlane =
-        std::make_shared<PlaneProbe>("crossStreamPlane", para->getOutputPath(), timeStartAveraging / deltaT,
-                                     averagingTimestepsPlaneProbes, timeStepStartOutProbe, timeOutProbe / deltaT);
-    crossStreamPlane->setProbePlane(c1o2 * lengthX, c0o1, c0o1, deltaX, lengthY, lengthZ);
+    auto crossStreamPlane = std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), "crossStreamPlane",
+                                                         timeStepStartAveraging, averagingTimestepsPlaneProbes,
+                                                         timeStepStartOutProbe, timeStepOutProbe, false, false);
+    crossStreamPlane->addProbePlane(c1o2 * lengthX, c0o1, c0o1, deltaX, lengthY, lengthZ);
     crossStreamPlane->addAllAvailableStatistics();
-    para->addProbe(crossStreamPlane);
+    para->addSampler(crossStreamPlane);
 
     if (usePrecursorInflow) {
-        auto streamwisePlane =
-            std::make_shared<PlaneProbe>("streamwisePlane", para->getOutputPath(), timeStartAveraging / deltaT,
-                                         averagingTimestepsPlaneProbes, timeStepStartOutProbe, timeOutProbe / deltaT);
-        streamwisePlane->setProbePlane(c0o1, c1o2 * lengthY, c0o1, lengthX, deltaX, lengthZ);
+        auto streamwisePlane = std::make_shared<Probe>(
+            para, cudaMemoryManager, para->getOutputPath(), "streamwisePlane", timeStepStartAveraging,
+            averagingTimestepsPlaneProbes, timeStepStartOutProbe, timeStepOutProbe, false, false);
+        streamwisePlane->addProbePlane(c0o1, c1o2 * lengthY, c0o1, lengthX, deltaX, lengthZ);
         streamwisePlane->addAllAvailableStatistics();
-        para->addProbe(streamwisePlane);
+        para->addSampler(streamwisePlane);
     }
 
     if (writePrecursor) {
@@ -401,38 +381,14 @@ void run(const vf::basics::ConfigurationFile& config)
         const auto outputVariable =
             useDistributionsForPrecursor ? OutputVariable::Distributions : OutputVariable::Velocities;
         auto precursorWriter = std::make_shared<PrecursorWriter>(
-            "precursor", fullPrecursorDirectory, positionXPrecursorSamplingPlane, c0o1, lengthY, c0o1, lengthZ,
-            timeStepStartPrecursor, timeStepsWritePrecursor, outputVariable, maximumNumberOfTimestepsPerPrecursorFile);
-        para->addProbe(precursorWriter);
+            para, cudaMemoryManager, fullPrecursorDirectory, "precursor", positionXPrecursorSamplingPlane, c0o1, lengthY,
+            c0o1, lengthZ, timeStepStartPrecursor, timeStepsWritePrecursor, outputVariable,
+            maximumNumberOfTimestepsPerPrecursorFile);
+        para->addSampler(precursorWriter);
     }
 
-    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
-    auto gridGenerator = GridProvider::makeGridGenerator(gridBuilder, para, cudaMemoryManager, communicator);
     auto tmFactory = std::make_shared<TurbulenceModelFactory>(para);
     tmFactory->readConfigFile(config);
-
-    VF_LOG_INFO("Start Running ActuatorLine Showcase...\n");
-
-    VF_LOG_INFO("world parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("dt [s]                 = {}", deltaT);
-    VF_LOG_INFO("world_domain   [m]     = {},{},{}", lengthX, lengthY, lengthZ);
-    VF_LOG_INFO("geostrophic wind [m/s] = {}", velocityProfile(boundaryLayerHeight));
-    VF_LOG_INFO("dx [m]                 = {}", deltaX);
-    VF_LOG_INFO("");
-
-    VF_LOG_INFO("LB parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("lb_velocity [dx/dt]    = {}", velocityLB);
-    VF_LOG_INFO("lb_viscosity [dx^2/dt] = {}", viscosityLB);
-    VF_LOG_INFO("");
-
-    VF_LOG_INFO("simulation parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("n timesteps            = {}", timeStepOut);
-    VF_LOG_INFO("write_nth_timestep     = {}", timeStepEnd);
-    VF_LOG_INFO("output_path            = {}", para->getOutputPath());
-    VF_LOG_INFO("");
 
     VF_LOG_INFO("process parameter:");
     VF_LOG_INFO("Number of Processes {} process ID {}", numberOfProcesses, processID);
@@ -444,26 +400,20 @@ void run(const vf::basics::ConfigurationFile& config)
         VF_LOG_INFO("Process ID {} is a mid subdomain");
     printf("\n");
 
-    Simulation sim(para, cudaMemoryManager, communicator, *gridGenerator, &bcFactory, tmFactory, &scalingFactory);
-    sim.run();
+    Simulation simulation(para, cudaMemoryManager, gridBuilder, &bcFactory, tmFactory, &scalingFactory);
+    simulation.run();
 }
 
 int main(int argc, char* argv[])
 {
     try {
         vf::logging::Logger::initializeLogger();
-        auto config = vf::basics::loadConfig(argc, argv, "./abl.cfg");
+        auto config = vf::basics::loadConfig(argc, argv, defaultConfigFile);
         run(config);
-    } catch (const spdlog::spdlog_ex& ex) {
-        std::cout << "Log initialization failed: " << ex.what() << '\n';
-    } catch (const std::bad_alloc& e) {
-        VF_LOG_CRITICAL("Bad Alloc: {}", e.what());
     } catch (const std::exception& e) {
-        VF_LOG_CRITICAL("exception: {}", e.what());
-    } catch (...) {
-        VF_LOG_CRITICAL("Unknown exception!");
+        VF_LOG_WARNING("{}", e.what());
+        return 1;
     }
-
     return 0;
 }
 

@@ -86,7 +86,7 @@ void PressureCoefficientSimulationObserver::calculateRho()
             SPtr<Block3D> block                          = t.first;
             std::set<std::vector<int>> &bcNodeIndicesSet = t.second;
 
-            SPtr<ILBMKernel> kernel                 = block->getKernel();
+            SPtr<LBMKernel> kernel                 = block->getKernel();
             SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
 

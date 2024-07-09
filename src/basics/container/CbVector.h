@@ -58,8 +58,8 @@ class CbVectorAllocatorStd;
 //! is required that the same class can have different allocators.
 //!
 //! Rangecheck active, if:
-//! -debug  : not defined "NO_CB_RANGECHECK"
-//! -release: not defined "NO_CB_RANGECHECK" && defined "CB_RANGECHECK"
+//! -debug  : not defined "VF_NO_RANGECHECK"
+//! -release: not defined "VF_NO_RANGECHECK" && defined "VF_RANGECHECK"
 //=========================================================================
 //////////////////////////////////////////////////////////////////////////
 template <typename T>
@@ -183,22 +183,22 @@ public:
     /*==========================================================*/
     value_type &operator[](const size_type &i)
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (i >= dataSize)
             UB_THROW(UbException(UB_EXARGS, "T=" + (std::string) typeid(*this).name() + UbSystem::toString(i) +
                                                 " out of range (size=" + UbSystem::toString(dataSize) + ")"));
-#endif // _DEBUG
+#endif // VF_DEBUG
 
         return ptrData[i];
     }
     /*==========================================================*/
     const value_type &operator[](const size_type &i) const
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (i >= dataSize)
             UB_THROW(UbException(UB_EXARGS, "T=" + (std::string) typeid(*this).name() + UbSystem::toString(i) +
                                                 " out of range (size=" + UbSystem::toString(dataSize) + ")"));
-#endif // _DEBUG
+#endif // VF_DEBUG
 
         return ptrData[i];
     }

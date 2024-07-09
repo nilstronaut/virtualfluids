@@ -37,11 +37,11 @@
 #include "BCArray3D.h"
 #include "EsoSplit.h"
 #include "DataSet3D.h"
-#include "ILBMKernel.h"
+#include "LBMKernel.h"
 
 BCSet::BCSet() = default;
 //////////////////////////////////////////////////////////////////////////
-BCSet::BCSet(SPtr<ILBMKernel> kernel)
+BCSet::BCSet(SPtr<LBMKernel> kernel)
 {
     SPtr<DistributionArray3D> distributions =
         std::dynamic_pointer_cast<EsoTwist3D>(kernel->getDataSet()->getFdistributions());
@@ -51,7 +51,7 @@ BCSet::BCSet(SPtr<ILBMKernel> kernel)
 //////////////////////////////////////////////////////////////////////////
 BCSet::~BCSet() = default;
 //////////////////////////////////////////////////////////////////////////
-SPtr<BCSet> BCSet::clone(SPtr<ILBMKernel> kernel)
+SPtr<BCSet> BCSet::clone(SPtr<LBMKernel> kernel)
 {
     SPtr<BCSet> bcSet(new BCSet(kernel));
     return bcSet;

@@ -67,7 +67,7 @@ public:
                std::shared_ptr<CudaMemoryManager> cudaMemoryManager);
      ~GridReader() = default;
     void allocArrays_CoordNeighborGeo() override;
-    void allocArrays_BoundaryValues() override;
+    void allocArrays_BoundaryValues(const BoundaryConditionFactory* bcFactory) override;
     void allocArrays_OffsetScale() override;
     void allocArrays_taggedFluidNodes() override;
 

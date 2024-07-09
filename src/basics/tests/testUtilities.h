@@ -34,6 +34,7 @@
 #ifndef TESTUTILITIES_H
 #define TESTUTILITIES_H
 
+#include <string>
 #include <gmock/gmock.h>
 
 inline auto RealEq = [](auto value) {
@@ -51,6 +52,23 @@ inline auto RealNear = [](auto value, auto max_abs_error) {
     return testing::FloatNear(value, max_abs_error);
 #endif
 };
+
+namespace testingVF
+{
+
+inline void captureStdOut()
+{
+    testing::internal::CaptureStdout();
+}
+
+inline bool stdoutContainsWarning()
+{
+    std::string output = testing::internal::GetCapturedStdout();
+    std::cout << output;
+    return output.find("warning") != std::string::npos;
+}
+
+} // namespace testingVF
 
 #endif
 

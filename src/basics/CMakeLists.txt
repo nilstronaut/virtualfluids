@@ -32,11 +32,14 @@
 #! \author Soeren Peters
 #=======================================================================================
 
-include(buildInfo.cmake)
+include(MetaData/buildInfo.cmake)
 
-vf_add_library(PUBLIC_LINK logger EXCLUDE buildInfo.in.cpp PRIVATE_LINK project_options project_warnings)
+vf_add_library(PUBLIC_LINK logger yaml-cpp::yaml-cpp OpenMP::OpenMP_CXX EXCLUDE buildInfo.in.cpp PRIVATE_LINK project_options project_warnings)
+
 
 vf_get_library_name (library_name)
+target_sources(${library_name} PRIVATE ${buildInfoPath}/${buildInfoFile})
+
 target_include_directories(${library_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/geometry3d)
 target_include_directories(${library_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/geometry3d/KdTree)
 target_include_directories(${library_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/container)
@@ -58,6 +61,9 @@ if(VF_ENABLE_BOOST)
     target_link_libraries(${library_name} PRIVATE Boost::boost)
 endif()
 
+if(VF_ENABLE_OPENMP)
+    target_link_libraries(${library_name} PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 ## WARNINGS
 # TODO: Remove this and fix those warnings: https://git.rz.tu-bs.de/irmb/VirtualFluids_dev/-/issues/163

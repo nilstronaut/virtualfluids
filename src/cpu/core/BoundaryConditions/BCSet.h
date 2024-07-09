@@ -40,18 +40,18 @@
 
 class BCArray3D;
 class BCStrategy;
-class ILBMKernel;
+class LBMKernel;
 
 //! A class provides an interface for boundary conditions in the calculation loop.
 class BCSet
 {
 public:
     BCSet();
-    BCSet(SPtr<ILBMKernel> kernel);
+    BCSet(SPtr<LBMKernel> kernel);
     virtual ~BCSet();
     virtual SPtr<BCArray3D> getBCArray();
     virtual void setBCArray(SPtr<BCArray3D> bcarray);
-    virtual SPtr<BCSet> clone(SPtr<ILBMKernel> kernel);
+    virtual SPtr<BCSet> clone(SPtr<LBMKernel> kernel);
 
     void addBC(SPtr<BCStrategy> bc);
     void applyPreCollisionBC();

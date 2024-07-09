@@ -41,6 +41,7 @@
 #include <lbm/constants/D3Q27.h>
 
 #include "Parameter/Parameter.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Utilities/KernelUtilities.h"
 #include "logger/Logger.h"
 
@@ -66,7 +67,7 @@ __global__ void printFs(
     real minZ,
     real maxZ)
 {
-    const unsigned k_000 = getNodeIndex();
+    const unsigned k_000 = vf::cuda::get1DIndexFrom2DBlock();
 
     if (k_000 >= numberOfFluidNodes || typeOfGridNode[k_000] != GEO_FLUID)
         return;

@@ -14,7 +14,7 @@ To contribute use a merge request as follows:
 - Implement/fix your feature, comment your code.
 - Follow the code style of the project, including indentation. We provide files to help you with automatic formatting for clang-format and cmake-format.
 - Run the <!-- DOXYGEN_MAKE_REF -->[tests](docs/pages/unit-tests).
-- Write or adapt tests (<!-- DOXYGEN_MAKE_REF -->[Unit-Tests](docs/pages/unit-tests) and <!-- DOXYGEN_MAKE_REF -->[Regression-Tests](docs/pages/regression-tests)) as needed.
+- Write or adapt tests (<!-- DOXYGEN_MAKE_REF -->[Unit-Tests](docs/pages/unit-tests), <!-- DOXYGEN_MAKE_REF -->[Regression-Tests](docs/pages/regression-tests) and <!-- DOXYGEN_MAKE_REF -->[Performance-Tests](docs/pages/performance-tests)) as needed.
 - Add or change the <!-- DOXYGEN_MAKE_REF -->[documentation](docs/pages/how-to-document-code) as needed.
 - Push your branch to your fork on gitlab, the remote `origin`.
 - From your fork open a merge request in the correct branch. Target the project's `develop` branch

@@ -4,7 +4,7 @@
 source ./tests/regression-tests/__regression_test_executer.sh
 
 
-# 1. set reference data directory (must match the folder structure in https://github.com/irmb/test_data)
+# 1. set reference data directory (must match the folder structure in https://git.rz.tu-bs.de/irmb/virtualfluids-reference-data)
 REFERENCE_DATA_DIR=regression_tests/gpu/AtmosphericBoundaryLayer
 
 # 2. set cmake flags for the build of VirtualFluids

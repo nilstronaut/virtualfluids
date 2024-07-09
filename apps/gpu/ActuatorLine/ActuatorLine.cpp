@@ -31,21 +31,12 @@
 //! \{
 //! \author Henry Korb, Henrik Asmuth, Anna Wellmann
 //=======================================================================================
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <iostream>
-#include <string>
-#include <vector>
-//////////////////////////////////////////////////////////////////////////
 
 #include <basics/DataTypes.h>
-#include <basics/PointerDefinitions.h>
 #include <basics/config/ConfigurationFile.h>
 #include <basics/constants/NumericConstants.h>
 
 #include <logger/Logger.h>
-
-#include <parallel/MPICommunicator.h>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -57,21 +48,20 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
+#include "gpu/core/Calculation/Simulation.h"
+#include "gpu/core/Cuda/CudaMemoryManager.h"
 #include "gpu/core/DataStructureInitializer/GridProvider.h"
 #include "gpu/core/DataStructureInitializer/GridReaderGenerator/GridGenerator.h"
-#include "gpu/core/Cuda/CudaMemoryManager.h"
 #include "gpu/core/GridScaling/GridScalingFactory.h"
 #include "gpu/core/Kernel/KernelTypes.h"
-#include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/Output/FileWriter.h"
 #include "gpu/core/Parameter/Parameter.h"
 #include "gpu/core/PreCollisionInteractor/Actuator/ActuatorFarmStandalone.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PlaneProbe.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PointProbe.h"
-#include "gpu/core/PreCollisionInteractor/Probes/Probe.h"
+#include "gpu/core/Samplers/Probe.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
 
 //////////////////////////////////////////////////////////////////////////
+const std::string defaultConfigFile = "actuatorline.cfg";
 
 void run(const vf::basics::ConfigurationFile& config)
 {
@@ -148,6 +138,8 @@ void run(const vf::basics::ConfigurationFile& config)
 
     auto para = std::make_shared<Parameter>(&config);
 
+    para->worldLength = rotorDiameter;
+
     para->setOutputPrefix(simulationName);
 
     para->setPrintFiles(true);
@@ -184,11 +176,14 @@ void run(const vf::basics::ConfigurationFile& config)
     gridBuilder->setPressureBoundaryCondition(SideType::PX, 0.0);
 
     BoundaryConditionFactory bcFactory = BoundaryConditionFactory();
-    bcFactory.setVelocityBoundaryCondition(BoundaryConditionFactory::VelocityBC::VelocityWithPressureInterpolatedCompressible);
+    bcFactory.setVelocityBoundaryCondition(
+        BoundaryConditionFactory::VelocityBC::VelocityWithPressureInterpolatedCompressible);
     bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::OutflowNonReflective);
 
     SPtr<TurbulenceModelFactory> tmFactory = std::make_shared<TurbulenceModelFactory>(para);
     tmFactory->readConfigFile(config);
+
+    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
 
     //////////////////////////////////////////////////////////////////////////
     // add turbine
@@ -202,9 +197,9 @@ void run(const vf::basics::ConfigurationFile& config)
     const std::vector<real> rotorSpeeds { 2 * tipSpeedRatio * velocity / rotorDiameter };
 
     SPtr<ActuatorFarmStandalone> actuatorFarm = std::make_shared<ActuatorFarmStandalone>(
-        rotorDiameter, actuatorNodesPerBlade, turbinePositionsX, turbinePositionsY, turbinePositionsZ, rotorSpeeds, density,
-        smearingWidth, level, deltaT, deltaX);
-    para->addActuator(actuatorFarm);
+        para, cudaMemoryManager, rotorDiameter, actuatorNodesPerBlade, turbinePositionsX, turbinePositionsY,
+        turbinePositionsZ, rotorSpeeds, density, smearingWidth, level, deltaT, deltaX);
+    para->addInteractor(actuatorFarm);
 
     actuatorFarm->enableOutput("ActuatorLineForcesAndVelocities", timeStepStartOutProbe, timeStepOutProbe);
 
@@ -216,79 +211,50 @@ void run(const vf::basics::ConfigurationFile& config)
 
     for (size_t i = 0; i < planePositions.size(); i++) {
         const std::string name = "planeProbe_" + std::to_string(i);
-        SPtr<PlaneProbe> planeProbe =
-            std::make_shared<PlaneProbe>(name, para->getOutputPath(), timeStepStartTemporalAveraging,
-                                         numberOfAvergingTimeSteps, timeStepStartOutProbe, timeStepOutProbe);
-        planeProbe->setProbePlane(turbinePositionsX[0] + planePositions[i], -0.5 * lengthY, -0.5 * lengthZ, deltaX, lengthY, lengthZ);
-        planeProbe->addStatistic(Statistic::Means);
-        planeProbe->addStatistic(Statistic::Variances);
-        planeProbe->addStatistic(Statistic::Instantaneous);
-        para->addProbe(planeProbe);
+        auto planeProbe =
+            std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), name, timeStepStartTemporalAveraging,
+                                    numberOfAvergingTimeSteps, timeStepStartOutProbe, timeStepOutProbe, false, false);
+        planeProbe->addProbePlane(turbinePositionsX[0] + planePositions[i], -0.5 * lengthY, -0.5 * lengthZ, deltaX, lengthY,
+                                  lengthZ);
+        planeProbe->addStatistic(Probe::Statistic::Means);
+        planeProbe->addStatistic(Probe::Statistic::Variances);
+        planeProbe->addStatistic(Probe::Statistic::Instantaneous);
+        para->addSampler(planeProbe);
     }
 
-    SPtr<PlaneProbe> planeProbeVertical =
-        std::make_shared<PlaneProbe>("planeProbeVertical", para->getOutputPath(), timeStepStartTemporalAveraging,
-                                     numberOfAvergingTimeSteps, timeStepStartOutProbe, timeStepOutProbe);
-    planeProbeVertical->setProbePlane(0, turbinePositionsY[0], -0.5 * lengthZ, lengthX, deltaX, lengthZ);
-    planeProbeVertical->addStatistic(Statistic::Means);
-    planeProbeVertical->addStatistic(Statistic::Variances);
-    planeProbeVertical->addStatistic(Statistic::Instantaneous);
-    para->addProbe(planeProbeVertical);
+    auto planeProbeVertical = std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), "planeProbeVertical",
+                                                      timeStepStartTemporalAveraging, numberOfAvergingTimeSteps,
+                                                      timeStepStartOutProbe, timeStepOutProbe, false, false);
+    planeProbeVertical->addProbePlane(0, turbinePositionsY[0], -0.5 * lengthZ, lengthX, deltaX, lengthZ);
+    planeProbeVertical->addStatistic(Probe::Statistic::Means);
+    planeProbeVertical->addStatistic(Probe::Statistic::Variances);
+    planeProbeVertical->addStatistic(Probe::Statistic::Instantaneous);
+    para->addSampler(planeProbeVertical);
 
-    SPtr<PlaneProbe> planeProbeHorizontal =
-        std::make_shared<PlaneProbe>("planeProbeHorizontal", para->getOutputPath(), timeStepStartTemporalAveraging,
-                                     numberOfAvergingTimeSteps, timeStepStartOutProbe, timeStepOutProbe);
-    planeProbeHorizontal->setProbePlane(0, -0.5 * lengthY, turbinePositionsZ[0], lengthX, lengthY, deltaX);
-    planeProbeHorizontal->addStatistic(Statistic::Means);
-    planeProbeHorizontal->addStatistic(Statistic::Variances);
-    planeProbeHorizontal->addStatistic(Statistic::Instantaneous);
-    para->addProbe(planeProbeHorizontal);
+    auto planeProbeHorizontal = std::make_shared<Probe>(
+        para, cudaMemoryManager, para->getOutputPath(), "planeProbeHorizontal", timeStepStartTemporalAveraging,
+        numberOfAvergingTimeSteps, timeStepStartOutProbe, timeStepOutProbe, false, false);
+    planeProbeHorizontal->addProbePlane(0, -0.5 * lengthY, turbinePositionsZ[0], lengthX, lengthY, deltaX);
+    planeProbeHorizontal->addStatistic(Probe::Statistic::Means);
+    planeProbeHorizontal->addStatistic(Probe::Statistic::Variances);
+    planeProbeHorizontal->addStatistic(Probe::Statistic::Instantaneous);
+    para->addSampler(planeProbeHorizontal);
 
     if (probePositionsX.size() > 0) {
-        SPtr<PointProbe> timeseriesProbe =
-            std::make_shared<PointProbe>("timeProbe", para->getOutputPath(), timeStepStartTemporalAveraging,
-                                         timeStepAverageTimeSeriesProbe, timeStepStartOutProbe, timeStepOutProbe, true);
+        auto timeseriesProbe = std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), "timeProbe",
+                                                       timeStepStartTemporalAveraging, timeStepAverageTimeSeriesProbe,
+                                                       timeStepStartOutProbe, timeStepOutProbe, true, false);
         timeseriesProbe->addProbePointsFromList(probePositionsX, probePositionsY, probePositionsZ);
-        timeseriesProbe->addStatistic(Statistic::Instantaneous);
-        timeseriesProbe->addStatistic(Statistic::Means);
-        para->addProbe(timeseriesProbe);
+        timeseriesProbe->addStatistic(Probe::Statistic::Instantaneous);
+        timeseriesProbe->addStatistic(Probe::Statistic::Means);
+        para->addSampler(timeseriesProbe);
     }
-
-    //////////////////////////////////////////////////////////////////////////
-    // set copy mesh to simulation
-    //////////////////////////////////////////////////////////////////////////
-
-    vf::parallel::Communicator& communicator = *vf::parallel::MPICommunicator::getInstance();
-    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
-
-    auto gridGenerator = GridProvider::makeGridGenerator(gridBuilder, para, cudaMemoryManager, communicator);
 
     //////////////////////////////////////////////////////////////////////////
     // run simulation
     //////////////////////////////////////////////////////////////////////////
 
     VF_LOG_INFO("Start Running ActuatorLine Showcase...\n");
-
-    VF_LOG_INFO("world parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("dt [s]                 = {}", deltaT);
-    VF_LOG_INFO("world_domain   [m]     = {},{},{}", lengthX, lengthY, lengthZ);
-    VF_LOG_INFO("world_velocity [m/s]   = {}", velocity);
-    VF_LOG_INFO("dx [m]                 = {}", deltaX);
-    VF_LOG_INFO("");
-
-    VF_LOG_INFO("LB parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("lb_velocity [dx/dt]    = {}", velocityLB);
-    VF_LOG_INFO("lb_viscosity [dx^2/dt] = {}", viscosityLB);
-    VF_LOG_INFO("");
-
-    VF_LOG_INFO("simulation parameter:");
-    VF_LOG_INFO("--------------");
-    VF_LOG_INFO("n timesteps            = {}", timeStepOut);
-    VF_LOG_INFO("write_nth_timestep     = {}", timeStepEnd);
-    VF_LOG_INFO("output_path            = {}", para->getOutputPath());
-    VF_LOG_INFO("");
 
     VF_LOG_INFO("turbine parameters:");
     VF_LOG_INFO("--------------");
@@ -298,15 +264,15 @@ void run(const vf::basics::ConfigurationFile& config)
     VF_LOG_INFO("smearingWidth [m]      = {}", smearingWidth);
     VF_LOG_INFO("tipSpeedRatio          = {}", tipSpeedRatio);
 
-    Simulation sim(para, cudaMemoryManager, communicator, *gridGenerator, &bcFactory, tmFactory);
-    sim.run();
+    Simulation simulation(para, cudaMemoryManager, gridBuilder, &bcFactory, tmFactory);
+    simulation.run();
 }
 
 int main(int argc, char* argv[])
 {
     try {
         vf::logging::Logger::initializeLogger();
-        auto config = vf::basics::loadConfig(argc, argv, "./actuatorline.cfg");
+        auto config = vf::basics::loadConfig(argc, argv, defaultConfigFile);
         run(config);
     } catch (const std::exception& e) {
         VF_LOG_WARNING("{}", e.what());

@@ -28,4 +28,4 @@ cd virtualfluids-mpich-bind/
 mkdir -p results
 
 export MPI_DIR="/cluster/mpi/mpich"
-srun --mpi=pmi2 singularity exec --bind "$MPI_DIR" rockylinux9-mpich-bind.sif /build/bin/FlowAroundCylinder cylinder.cfg 
+srun --mpi=pmi2 singularity exec --bind "$MPI_DIR" Rockylinux9.sif /build/bin/LidDrivenCavityCPU LidDrivenCavity_regression_test.cfg 

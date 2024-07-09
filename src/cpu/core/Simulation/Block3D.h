@@ -43,7 +43,6 @@
 
 class Block3DConnector;
 class LBMKernel;
-class ILBMKernel;
 
 //! A class implements a block structure
 class Block3D
@@ -64,7 +63,7 @@ public:
     bool isNotActive() const;
 
     void setKernel(SPtr<LBMKernel> kernel);
-    SPtr<ILBMKernel> getKernel() const;
+    SPtr<LBMKernel> getKernel() const;
     void deleteKernel();
 
     void setBundle(int bundle);

@@ -37,6 +37,7 @@
 #include <memory>
 #include <vector>
 
+#include <basics/MetaData/MetaData.h>
 #include <basics/PointerDefinitions.h>
 #include <basics/Timer/Timer.h>
 
@@ -48,6 +49,7 @@ namespace vf::parallel
 class Communicator;
 }
 
+class GridBuilder;
 class CudaMemoryManager;
 class Parameter;
 class GridProvider;
@@ -70,10 +72,18 @@ class TurbulenceModelFactory;
 class Simulation
 {
 public:
+    Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<GridBuilder> builder, const BoundaryConditionFactory* bcFactory,
+               GridScalingFactory* scalingFactory = nullptr);
+    Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager, std::shared_ptr<GridBuilder> builder, const BoundaryConditionFactory* bcFactory,
+               GridScalingFactory* scalingFactory = nullptr);
+
+    Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<GridBuilder> builder, const BoundaryConditionFactory* bcFactory,
+               SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory* scalingFactory = nullptr);
+    Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager, std::shared_ptr<GridBuilder> builder, const BoundaryConditionFactory* bcFactory,
+               SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory* scalingFactory = nullptr);
+
     Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager,
-               vf::parallel::Communicator &communicator, GridProvider &gridProvider, BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory = nullptr);    
-    Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager,
-               vf::parallel::Communicator &communicator, GridProvider &gridProvider, BoundaryConditionFactory* bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory* scalingFactory = nullptr);
+               vf::parallel::Communicator &communicator, GridProvider &gridProvider, const BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory = nullptr);
 
     ~Simulation();
     void run();
@@ -90,8 +100,8 @@ public:
     void initTimers();
 
 private:
-    void init(GridProvider &gridProvider, BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);
-    void allocNeighborsOffsetsScalesAndBoundaries(GridProvider& gridProvider);
+    void init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);
+    void allocNeighborsOffsetsScalesAndBoundaries(GridProvider& gridProvider, const BoundaryConditionFactory* bcFactory);
     void readAndWriteFiles(uint timestep);
 
     std::unique_ptr<KernelFactory> kernelFactory;
@@ -111,7 +121,7 @@ private:
 
     // Timer
     vf::basics::Timer averageTimer;
-    PerformanceMeasurement performanceOutput;
+    std::unique_ptr<PerformanceMeasurement> performanceOutput;
     uint previousTimestepForAveraging;
     uint previousTimestepForTurbulenceIntensityCalculation;
     uint timestepForMeasuringPoints;
@@ -122,6 +132,8 @@ private:
     std::unique_ptr<KineticEnergyAnalyzer> kineticEnergyAnalyzer;
     std::unique_ptr<EnstrophyAnalyzer> enstrophyAnalyzer;
     std::unique_ptr<UpdateGrid27> updateGrid27;
+
+    vf::basics::MetaData metaData;
 };
 #endif
 

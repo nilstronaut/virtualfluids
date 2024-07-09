@@ -12,21 +12,21 @@
 VirtualFluids (VF) is a research code developed at the Institute for Computational Modeling in Civil Engineering (iRMB) at the Technical University Braunschweig. The code is a Computational Fluid Dynamics (CFD) solver based on the Lattice Boltzmann Method (LBM) for turbulent and multicomponent flow problems. It includes distributed pre- and postprocessing capabilities for simulations with more than 100 billion degrees of freedom.
 
 
-## Documentation
+### Documentation
 You can find more information about the code in the [Documentation pages](https://irmb.gitlab-pages.rz.tu-bs.de/VirtualFluids/).
-The pages contains information about the installation, usage and development of VirtualFluids.
+The pages contain information about the installation, usage and development of VirtualFluids.
 
-## License
+### License
 VirtualFluids is licensed under the terms and conditions of the GNU General Public License (GPL) version 3 or - at your choice - any later.
 
 See the file [COPYING.txt](COPYING.txt) for copying permissions. 
-For a full list of contributors see <!-- DOXYGEN_MAKE_REF -->[AUTHORS](authors). If you notice that a contributor is missing on the list, please contact us or open a merge request adding the name.
+For a full list of contributors see <!-- DOXYGEN_MAKE_REF -->[AUTHORS](authors). If you notice that a contributor is missing on the list, please contact us or open a merge request to add the name.
 
-## How to cite
-VirtualFluids is research software and developed at research institutions.
-You can cite specific releases via Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10283049.svg)](https://doi.org/10.5281/zenodo.10283049).
+### How to cite
+VirtualFluids is research software developed at research institutions.
+You can cite specific releases via Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10283048.svg)](https://doi.org/10.5281/zenodo.10283048).
 
-## Get in touch
+### Get in touch
 You can find our main repository, where the development takes place [here](https://git.rz.tu-bs.de/irmb/VirtualFluids).
 Contributions are highly welcome. Please review the <!-- DOXYGEN_MAKE_REF -->[contribution guidelines](contributing) before opening issues and merge requests.
 

@@ -43,11 +43,13 @@
 #include <basics/constants/NumericConstants.h>
 
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Calculation/Calculation.h"
 
 using namespace vf::basics::constant;
 using namespace vf::lbm::dir;
 using namespace vf::gpu;
+using namespace vf::cuda;
 
 __global__ void calculateMacroscopicQuantities_device(
     real* vxD,
@@ -66,7 +68,7 @@ __global__ void calculateMacroscopicQuantities_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
    
     //////////////////////////////////////////////////////////////////////////
     if(nodeIndex<numberOfLBnodes)
@@ -206,7 +208,7 @@ __global__ void calculateMacroscopicQuantitiesCompressible_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     if(nodeIndex >= numberOfLBnodes)
         return;
@@ -251,7 +253,7 @@ __global__ void calculateMean_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if( nodeIndex < numberOfLBnodes )
@@ -402,7 +404,7 @@ __global__ void calculateMeanCompressible_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if( nodeIndex < numberOfLBnodes )
@@ -552,7 +554,7 @@ __global__ void calculateMeanCompressibleAdvectionDiffusion_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if ( nodeIndex < numberOfLBnodes )
@@ -738,7 +740,7 @@ __global__ void calculateMacrosopicMean_device(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if(nodeIndex<numberOfLBnodes)
@@ -779,7 +781,7 @@ __global__ void LBResetMeanValuesSP27(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if ( nodeIndex < numberOfLBnodes )
@@ -806,7 +808,7 @@ __global__ void LBResetMeanValuesAD27(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if (nodeIndex < numberOfLBnodes)
@@ -840,7 +842,7 @@ __global__ void LBCalcMeasurePoints(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = getNodeIndex();
+    const unsigned nodeIndex = get1DIndexFrom2DBlock();
 
     //////////////////////////////////////////////////////////////////////////
     if( nodeIndex < numberOfPointskMP )

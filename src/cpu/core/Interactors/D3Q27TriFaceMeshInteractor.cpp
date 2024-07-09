@@ -111,7 +111,7 @@ bool D3Q27TriFaceMeshInteractor::setDifferencesToGbObject3D(const SPtr<Block3D> 
     bool oneEntryGotBC = false; 
     SPtr<BoundaryConditions> bc;
 
-    SPtr<ILBMKernel> kernel = block->getKernel();
+    SPtr<LBMKernel> kernel = block->getKernel();
     SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
     double internX1, internX2, internX3;
@@ -364,7 +364,7 @@ void D3Q27TriFaceMeshInteractor::setQs(const real &timeStep)
                 //////////////////////////////////////////////////////////////////////////
                 bool blockGotBCs = false;
 
-                SPtr<ILBMKernel> kernel  = block->getKernel();
+                SPtr<LBMKernel> kernel  = block->getKernel();
                 SPtr<BCArray3D> bcMatrix = kernel->getBCSet()->getBCArray();
 
                 int indexMinX1 = 0;
@@ -875,7 +875,7 @@ void D3Q27TriFaceMeshInteractor::reinitWithStoredQs(const real & /*timeStep*/)
     for (it1 = this->solidNodeIndicesMap.begin(); it1 != this->solidNodeIndicesMap.end(); ++it1) {
         SPtr<Block3D> block = it1->first;
 
-        SPtr<ILBMKernel> kernel           = block->getKernel();
+        SPtr<LBMKernel> kernel           = block->getKernel();
         SPtr<BCArray3D> bcMatrix          = kernel->getBCSet()->getBCArray();
         std::set<UbTupleInt3> &indicesSet = it1->second;
 
@@ -888,7 +888,7 @@ void D3Q27TriFaceMeshInteractor::reinitWithStoredQs(const real & /*timeStep*/)
     std::map<SPtr<Block3D>, std::map<UbTupleInt3, std::vector<float>>>::iterator it;
     for (it = bcNodeIndicesAndQsMap.begin(); it != bcNodeIndicesAndQsMap.end(); ++it) {
         SPtr<Block3D> block      = it->first;
-        SPtr<ILBMKernel> kernel  = block->getKernel();
+        SPtr<LBMKernel> kernel  = block->getKernel();
         SPtr<BCArray3D> bcMatrix = kernel->getBCSet()->getBCArray();
 
         std::map<UbTupleInt3, std::vector<float>>::iterator it2;

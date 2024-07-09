@@ -31,26 +31,15 @@
 //! \{
 //! \author Anna Wellmann
 //=======================================================================================
-#define _USE_MATH_DEFINES
-#include <exception>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 
-//////////////////////////////////////////////////////////////////////////
-
 #include <basics/DataTypes.h>
-#include <basics/PointerDefinitions.h>
 #include <basics/StringUtilities/StringUtil.h>
 #include <basics/config/ConfigurationFile.h>
-#include <logger/Logger.h>
-#include <parallel/MPICommunicator.h>
 
-//////////////////////////////////////////////////////////////////////////
+#include <logger/Logger.h>
+
+#include <parallel/MPICommunicator.h>
 
 #include "GridGenerator/geometries/Cuboid/Cuboid.h"
 #include "GridGenerator/geometries/Sphere/Sphere.h"
@@ -65,17 +54,11 @@
 #include "GridGenerator/io/SimulationFileWriter/SimulationFileWriter.h"
 #include "GridGenerator/utilities/communication.h"
 
-//////////////////////////////////////////////////////////////////////////
-
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
-#include "gpu/core/DataStructureInitializer/GridProvider.h"
-#include "gpu/core/DataStructureInitializer/GridReaderGenerator/GridGenerator.h"
-#include "gpu/core/Cuda/CudaMemoryManager.h"
+#include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/GridScaling/GridScalingFactory.h"
 #include "gpu/core/Kernel/KernelFactory/KernelFactoryImp.h"
 #include "gpu/core/Kernel/KernelTypes.h"
-#include "gpu/core/Calculation/Simulation.h"
-#include "gpu/core/Output/FileWriter.h"
 #include "gpu/core/Parameter/Parameter.h"
 #include "gpu/core/PreProcessor/PreProcessorFactory/PreProcessorFactoryImp.h"
 
@@ -195,12 +178,8 @@ void run(const vf::basics::ConfigurationFile& config)
     bcFactory.setVelocityBoundaryCondition(BoundaryConditionFactory::VelocityBC::VelocityInterpolatedCompressible);
     bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumCompressible);
 
-    // move grid from grid generator to simulation
-
-    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
-    SPtr<GridProvider> gridGenerator = GridProvider::makeGridGenerator(gridBuilderFacade->getGridBuilder(), para, cudaMemoryManager, communicator);
-    Simulation sim(para, cudaMemoryManager, communicator, *gridGenerator, &bcFactory, &scalingFactory);
-    sim.run();
+    Simulation simulation(para, gridBuilderFacade->getGridBuilder(), &bcFactory, &scalingFactory);
+    simulation.run();
 }
 
 int main(int argc, char* argv[])
@@ -214,7 +193,6 @@ int main(int argc, char* argv[])
         VF_LOG_WARNING("{}", e.what());
         return 1;
     }
-
     return 0;
 }
 

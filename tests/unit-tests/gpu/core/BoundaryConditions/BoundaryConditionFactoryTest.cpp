@@ -46,7 +46,8 @@
 #include <gpu/core/BoundaryConditions/Velocity/Velocity.h>
 
 using bcFunction = void (*)(LBMSimulationParameter *, QforBoundaryConditions *);
-using bcFunctionParamter = void (*)(Parameter *, QforBoundaryConditions *, const int level);
+using bcFunctionDirectional = void (*)(LBMSimulationParameter *, QforDirectionalBoundaryCondition *);
+using bcFunctionParameter = void (*)(Parameter *, QforBoundaryConditions *, const int level);
 
 // tests for default boundary conditions
 TEST(BoundaryConditionFactoryTest, defaultVelocityBC)
@@ -75,7 +76,7 @@ TEST(BoundaryConditionFactoryTest, defaultSlipBC)
 TEST(BoundaryConditionFactoryTest, defaultPressureBC)
 {
     auto bcFactory = BoundaryConditionFactory();
-    auto bc = bcFactory.getPressureBoundaryConditionPre();
+    auto bc = std::get<boundaryCondition>(bcFactory.getPressureBoundaryConditionPre());
     EXPECT_THAT(bc, testing::Eq(nullptr));
     EXPECT_THROW(bc(nullptr, nullptr), std::bad_function_call);
 }
@@ -176,11 +177,11 @@ TEST(BoundaryConditionFactoryTest, slipBC)
         << "The returned boundary condition is not the expected function QSlipDevCompTurbulentViscosity27.";
 }
 
-bcFunction getPressureBcTarget(BoundaryConditionFactory &bcFactory)
+bcFunctionDirectional getDirectionalPressureBcTarget(BoundaryConditionFactory &bcFactory)
 {
-    auto bc = bcFactory.getPressureBoundaryConditionPre();
-    void (*bcTarget)(LBMSimulationParameter *, QforBoundaryConditions *) =
-        (*bc.target<void (*)(LBMSimulationParameter *, QforBoundaryConditions *)>());
+    auto bc = std::get<boundaryConditionDirectional>(bcFactory.getPressureBoundaryConditionPre());
+    void (*bcTarget)(LBMSimulationParameter *, QforDirectionalBoundaryCondition *) =
+        (*bc.target<void (*)(LBMSimulationParameter *, QforDirectionalBoundaryCondition *)>());
     return bcTarget;
 }
 
@@ -189,16 +190,20 @@ TEST(BoundaryConditionFactoryTest, pressureBC)
     auto bcFactory = BoundaryConditionFactory();
 
     bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumIncompressible);
-    EXPECT_TRUE(*(getPressureBcTarget(bcFactory)) == PressureNonEquilibriumIncompressible)
+    EXPECT_TRUE(*(getDirectionalPressureBcTarget(bcFactory)) == PressureNonEquilibriumIncompressible)
         << "The returned boundary condition is not the expected function PressureNonEquilibriumIncompressible.";
 
     bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumCompressible);
-    EXPECT_TRUE(*(getPressureBcTarget(bcFactory)) == PressureNonEquilibriumCompressible)
+    EXPECT_TRUE(*(getDirectionalPressureBcTarget(bcFactory)) == PressureNonEquilibriumCompressible)
         << "The returned boundary condition is not the expected function PressureNonEquilibriumCompressible.";
 
     bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::OutflowNonReflective);
-    EXPECT_TRUE(*(getPressureBcTarget(bcFactory)) == OutflowNonReflecting)
-        << "The returned boundary condition is not the expected function OutflowNonReflecting_Device.";
+    EXPECT_TRUE(*(getDirectionalPressureBcTarget(bcFactory)) == OutflowNonReflecting)
+        << "The returned boundary condition is not the expected function OutflowNonReflecting.";
+
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::OutflowNonReflectivePressureCorrection);
+    EXPECT_TRUE(*(getDirectionalPressureBcTarget(bcFactory)) == OutflowNonReflectingPressureCorrection)
+        << "The returned boundary condition is not the expected function OutflowNonReflectingPressureCorrection.";
 }
 
 bcFunction getGeometryBcTarget(BoundaryConditionFactory &bcFactory)
@@ -246,15 +251,39 @@ TEST(BoundaryConditionFactoryTest, stressBoundaryConditions)
 
     bcFactory.setStressBoundaryCondition(BoundaryConditionFactory::StressBC::StressBounceBackCompressible);
     auto bc = bcFactory.getStressBoundaryConditionPost();
-    auto bcTarget = *bc.target<bcFunctionParamter>();
+    auto bcTarget = *bc.target<bcFunctionParameter>();
     EXPECT_TRUE(*bcTarget == StressBounceBackCompressible)
         << "The returned boundary condition is not the expected function StressBounceBackCompressible.";
 
     bcFactory.setStressBoundaryCondition(BoundaryConditionFactory::StressBC::StressCompressible);
     bc = bcFactory.getStressBoundaryConditionPost();
-    bcTarget = *bc.target<bcFunctionParamter>();
+    bcTarget = *bc.target<bcFunctionParameter>();
     EXPECT_TRUE(*bcTarget == StressCompressible)
         << "The returned boundary condition is not the expected function StressCompressible.";
+}
+
+TEST(BoundaryConditionFactoryTest, hasDirectionalPressureBoundaryCondition_whenDirectionalBC_returnsTrue)
+{
+    auto bcFactory = BoundaryConditionFactory();
+
+    // check all directional pressure boundary conditions
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumCompressible);
+    EXPECT_TRUE(bcFactory.hasDirectionalPressureBoundaryCondition());
+
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumIncompressible);
+    EXPECT_TRUE(bcFactory.hasDirectionalPressureBoundaryCondition());
+
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::OutflowNonReflective);
+    EXPECT_TRUE(bcFactory.hasDirectionalPressureBoundaryCondition());
+
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::OutflowNonReflectivePressureCorrection);
+    EXPECT_TRUE(bcFactory.hasDirectionalPressureBoundaryCondition());
+}
+
+TEST(BoundaryConditionFactoryTest ,hasDirectionalPressureBoundaryCondition_noPressureBC_returnsTrue)
+{
+    auto bcFactory=BoundaryConditionFactory();
+    EXPECT_FALSE(bcFactory.hasDirectionalPressureBoundaryCondition());
 }
 
 //! \}

@@ -33,6 +33,7 @@
 //=======================================================================================
 #include "Simulation.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -40,11 +41,15 @@
 
 #include <cuda_helper/DeviceInfo.h>
 
+#include <basics/MetaData/MetaData.h>
+#include <basics/MetaData/YAML_MetaData.h>
 #include <basics/utilities/UbFileOutputASCII.h>
 
 #include <logger/Logger.h>
 
 #include <parallel/Communicator.h>
+#include <parallel/MPICommunicator.h>
+#include <parallel/NullCommunicator.h>
 
 #include "Calculation/Calculation.h"
 #include "Calculation/UpdateGrid27.h"
@@ -62,7 +67,9 @@
 #include "Output/FileWriter.h"
 #include "Output/InterfaceDebugWriter.hpp"
 #include "Output/MeasurePointWriter.hpp"
-#include "Output/NeighborDebugWriter.hpp"
+#include "Output/MetaDataCreator.h"
+#include "Output/NeighborDebugWriter.h"
+#include "Output/QDebugVtkWriter.hpp"
 #include "Parameter/EdgeNodeFinder.h"
 #include "Parameter/Parameter.h"
 #include "PostProcessor/Calc2ndMoments.h"
@@ -88,8 +95,44 @@ std::string getFileName(const std::string& fname, int step, int myID)
     return std::string(fname + "_Restart_" + std::to_string(myID) + "_" + std::to_string(step));
 }
 
+Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<GridBuilder> builder,
+                       const BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory)
+    : Simulation(para, std::make_shared<CudaMemoryManager>(para), builder, bcFactory, std::make_shared<TurbulenceModelFactory>(para), scalingFactory)
+{
+}
+
+Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager, std::shared_ptr<GridBuilder> builder,
+                       const BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory)
+    : Simulation(para, memoryManager, builder, bcFactory, std::make_shared<TurbulenceModelFactory>(para), scalingFactory)
+{
+}
+
+Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<GridBuilder> builder,
+                       const BoundaryConditionFactory* bcFactory, SPtr<TurbulenceModelFactory> tmFactory,
+                       GridScalingFactory* scalingFactory)
+    : Simulation(para, std::make_shared<CudaMemoryManager>(para), builder, bcFactory, tmFactory, scalingFactory)
+{
+}
+
+Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager, std::shared_ptr<GridBuilder> builder,
+                       const BoundaryConditionFactory* bcFactory, SPtr<TurbulenceModelFactory> tmFactory,
+                       GridScalingFactory* scalingFactory)
+    : para(para), cudaMemoryManager(memoryManager),
+#ifdef VF_MPI
+      communicator(*vf::parallel::MPICommunicator::getInstance())
+#else
+      communicator(*vf::parallel::NullCommunicator::getInstance())
+#endif
+      ,
+      kernelFactory(std::make_unique<KernelFactoryImp>()), preProcessorFactory(std::make_shared<PreProcessorFactoryImp>()),
+      dataWriter(std::make_unique<FileWriter>())
+{
+    auto gridGenerator = GridProvider::makeGridGenerator(builder, para, cudaMemoryManager, communicator);
+    init(*gridGenerator, bcFactory, tmFactory, scalingFactory);
+}
+
 Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager,
-                       vf::parallel::Communicator &communicator, GridProvider &gridProvider, BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory)
+                       vf::parallel::Communicator &communicator, GridProvider &gridProvider, const BoundaryConditionFactory* bcFactory, GridScalingFactory* scalingFactory)
     : para(para), cudaMemoryManager(memoryManager), communicator(communicator), kernelFactory(std::make_unique<KernelFactoryImp>()),
       preProcessorFactory(std::make_shared<PreProcessorFactoryImp>()), dataWriter(std::make_unique<FileWriter>())
 {
@@ -97,19 +140,13 @@ Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemo
     init(gridProvider, bcFactory, tmFactory, scalingFactory);
 }
 
-Simulation::Simulation(std::shared_ptr<Parameter> para, std::shared_ptr<CudaMemoryManager> memoryManager,
-                       vf::parallel::Communicator &communicator, GridProvider &gridProvider, BoundaryConditionFactory* bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory* scalingFactory)
-    : para(para), cudaMemoryManager(memoryManager), communicator(communicator), kernelFactory(std::make_unique<KernelFactoryImp>()),
-      preProcessorFactory(std::make_shared<PreProcessorFactoryImp>()), dataWriter(std::make_unique<FileWriter>())
-{
-    init(gridProvider, bcFactory, tmFactory, scalingFactory);
-}
-
-void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory)
+void Simulation::init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory)
 {
     gridProvider.initalGridInformations();
 
-    vf::cuda::verifyAndSetDevice(communicator.mapCudaDevicesOnHosts(para->getDevices(), para->getMaxDev()));
+    const int deviceId = communicator.mapCudaDevicesOnHosts(para->getDevices(), para->getMaxDev());
+
+    vf::cuda::verifyAndSetDevice(deviceId);
 
     para->initLBMSimulationParameter();
 
@@ -123,29 +160,23 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
 
     restart_object = std::make_shared<ASCIIRestartObject>();
 
-    //////////////////////////////////////////////////////////////////////////
-    VF_LOG_INFO("LB_Modell:       D3Q{}", para->getD3Qxx());
-    VF_LOG_INFO("Re:              {}", para->getRe());
-    VF_LOG_INFO("vis_ratio:       {}", para->getViscosityRatio());
-    VF_LOG_INFO("u0_ratio:        {}", para->getVelocityRatio());
-    VF_LOG_INFO("delta_rho:       {}", para->getDensityRatio());
-    VF_LOG_INFO("QuadricLimiters: {}, \t{}, \t{}", para->getQuadricLimitersHost()[0], para->getQuadricLimitersHost()[1], para->getQuadricLimitersHost()[2]);
-    //////////////////////////////////////////////////////////////////////////
+    VF_LOG_TRACE("vis_ratio:       {}", para->getViscosityRatio());
+    VF_LOG_TRACE("u0_ratio:        {}", para->getVelocityRatio());
+    VF_LOG_TRACE("delta_rho:       {}", para->getDensityRatio());
 
-    /////////////////////////////////////////////////////////////////////////
     cudaMemoryManager->setMemsizeGPU(0, true);
     //////////////////////////////////////////////////////////////////////////
-    allocNeighborsOffsetsScalesAndBoundaries(gridProvider);
+    allocNeighborsOffsetsScalesAndBoundaries(gridProvider, bcFactory);
 
     //! Get tagged fluid nodes with corresponding value for CollisionTemplate from interactors
-    for (SPtr<PreCollisionInteractor>& actuator : para->getActuators()) {
-        actuator->initInteractor(para, cudaMemoryManager);
-        actuator->getTaggedFluidNodes(&gridProvider);
+    for (SPtr<PreCollisionInteractor>& interactor : para->getInteractors()) {
+        interactor->init();
+        interactor->getTaggedFluidNodes(&gridProvider);
     }
 
-    for (SPtr<PreCollisionInteractor>& probe : para->getProbes()) {
-        probe->initInteractor(para, cudaMemoryManager);
-        probe->getTaggedFluidNodes(&gridProvider);
+    for (SPtr<Sampler>& sampler : para->getSamplers()) {
+        sampler->init();
+        sampler->getTaggedFluidNodes(&gridProvider);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -164,11 +195,11 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     //////////////////////////////////////////////////////////////////////////
     // Kernel init
     //////////////////////////////////////////////////////////////////////////
-    VF_LOG_INFO("make Kernels");
+    VF_LOG_TRACE("make Kernels");
     kernels = kernelFactory->makeKernels(para);
 
     if (para->getDiffOn()) {
-        VF_LOG_INFO("make AD Kernels");
+        VF_LOG_TRACE("make AD Kernels");
         adKernels = kernelFactory->makeAdvDifKernels(para);
         std::vector<PreProcessorType> preProADTypes = adKernels.at(0)->getPreProcessorTypes();
         preProcessorAD = preProcessorFactory->makePreProcessor(preProADTypes, para);
@@ -177,7 +208,7 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     //////////////////////////////////////////////////////////////////////////
     // PreProcessor init
     //////////////////////////////////////////////////////////////////////////
-    VF_LOG_INFO("make Preprocessors");
+    VF_LOG_TRACE("make Preprocessors");
     std::vector<PreProcessorType> preProTypes = kernels.at(0)->getPreProcessorTypes();
     preProcessor = preProcessorFactory->makePreProcessor(preProTypes, para);
 
@@ -191,7 +222,7 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     // Mean
     //////////////////////////////////////////////////////////////////////////
     if (para->getCalcMean()) {
-        VF_LOG_INFO("alloc Calculation for Mean Values");
+        VF_LOG_TRACE("alloc Calculation for Mean Values");
         if (para->getDiffOn())
             allocMeanAD(para.get(), cudaMemoryManager.get());
         else
@@ -202,7 +233,7 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     // Turbulence Intensity
     //////////////////////////////////////////////////////////////////////////
     if (para->getCalcTurbulenceIntensity()) {
-        VF_LOG_INFO("alloc arrays for calculating Turbulence Intensity");
+        VF_LOG_TRACE("alloc arrays for calculating Turbulence Intensity");
         allocTurbulenceIntensity(para.get(), cudaMemoryManager.get());
     }
 
@@ -226,7 +257,7 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     // MeasurePoints
     //////////////////////////////////////////////////////////////////////////
     if (para->getUseMeasurePoints()) {
-        VF_LOG_INFO("read measure points");
+        VF_LOG_TRACE("read measure points");
         ReaderMeasurePoints::readMeasurePoints(para.get(), cudaMemoryManager.get());
     }
 
@@ -290,7 +321,8 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
     //////////////////////////////////////////////////////////////////////////
     // Init UpdateGrid
     //////////////////////////////////////////////////////////////////////////
-    this->updateGrid27 = std::make_unique<UpdateGrid27>(para, communicator, cudaMemoryManager, kernels, adKernels, bcFactory, tmFactory, scalingFactory);
+    this->updateGrid27 = std::make_unique<UpdateGrid27>(para, communicator, cudaMemoryManager, kernels, adKernels, bcFactory,
+                                                        tmFactory, scalingFactory);
 
     //////////////////////////////////////////////////////////////////////////
     // Write Initialized Files
@@ -305,6 +337,10 @@ void Simulation::init(GridProvider &gridProvider, BoundaryConditionFactory *bcFa
 #endif
 
     VF_LOG_INFO("used Device Memory: {} MB", cudaMemoryManager->getMemsizeGPU() / 1000000.0);
+
+    performanceOutput = std::make_unique<PerformanceMeasurement>(*para);
+    metaData = vf::gpu::createMetaData(*para);
+    vf::basics::logPreSimulation(metaData);
 }
 
 void Simulation::addKineticEnergyAnalyzer(uint tAnalyse)
@@ -340,14 +376,13 @@ void Simulation::initTimers()
     averageTimer.start();
 }
 
-void Simulation::allocNeighborsOffsetsScalesAndBoundaries(GridProvider &gridProvider)
+void Simulation::allocNeighborsOffsetsScalesAndBoundaries(GridProvider &gridProvider, const BoundaryConditionFactory* bcFactory)
 {
     gridProvider.allocArrays_CoordNeighborGeo();
     gridProvider.allocArrays_OffsetScale();
-    gridProvider.allocArrays_BoundaryValues(); // allocArrays_BoundaryValues() has to be called after allocArrays_OffsetScale() because of initCommunicationArraysForCommAfterFinetoCoarse()
+    gridProvider.allocArrays_BoundaryValues(bcFactory); // allocArrays_BoundaryValues() has to be called after allocArrays_OffsetScale() because of initCommunicationArraysForCommAfterFinetoCoarse()
     gridProvider.allocArrays_BoundaryQs();
 }
-
 
 void Simulation::run()
 {
@@ -395,6 +430,14 @@ void Simulation::run()
     //    }
     //}
     //  //////////////////////////////////////////////////////////////////////////
+    averageTimer.end();
+    metaData.simulation.runtimeSeconds += averageTimer.getTimeInSeconds();
+    performanceOutput->log(averageTimer, para->getTimestepEnd(), communicator);
+    metaData.simulation.nups = performanceOutput->getNups();
+    metaData.simulation.runtimeSeconds = performanceOutput->totalRuntimeInSeconds();
+    vf::basics::logPostSimulation(metaData);
+
+    vf::basics::writeYAML(metaData, para->getFName() + ".yaml");
 }
 
 void Simulation::calculateTimestep(uint timestep)
@@ -539,7 +582,8 @@ void Simulation::calculateTimestep(uint timestep)
     ////////////////////////////////////////////////////////////////////////////////
     if (para->getTimestepOut() > 0 && timestep % para->getTimestepOut() == 0 && timestep >= para->getTimestepStartOut()) {
         averageTimer.end();
-        performanceOutput.print(averageTimer, timestep, para.get(), communicator);
+        metaData.simulation.runtimeSeconds += averageTimer.getTimeInSeconds();
+        performanceOutput->log(averageTimer, timestep, communicator);
 
         if (para->getPrintFiles()) {
             readAndWriteFiles(timestep);

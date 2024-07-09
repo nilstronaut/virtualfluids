@@ -51,7 +51,7 @@ ChangeBoundaryDensityBlockVisitor::~ChangeBoundaryDensityBlockVisitor() = defaul
 void ChangeBoundaryDensityBlockVisitor::visit(SPtr<Grid3D> grid, SPtr<Block3D> block)
 {
     if (block->getRank() == grid->getRank()) {
-        SPtr<ILBMKernel> kernel = block->getKernel();
+        SPtr<LBMKernel> kernel = block->getKernel();
         SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
         int minX1 = 0;

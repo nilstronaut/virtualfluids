@@ -602,7 +602,7 @@ real Parameter::getViscosityRatio()
 {
     return this->vis_ratio;
 }
-real Parameter::getVelocityRatio()
+real Parameter::getVelocityRatio() const
 {
     return this->u0_ratio;
 }
@@ -1239,13 +1239,13 @@ void Parameter::setADKernel(std::string adKernel)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // add-methods
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void Parameter::addActuator(SPtr<PreCollisionInteractor> actuator)
+void Parameter::addInteractor(SPtr<PreCollisionInteractor> interactor)
 {
-    actuators.push_back(actuator);
+    interactors.push_back(interactor);
 }
-void Parameter::addProbe(SPtr<PreCollisionInteractor> probe)
+void Parameter::addSampler(SPtr<Sampler> sampler)
 {
-    probes.push_back(probe);
+    samplers.push_back(sampler);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1267,7 +1267,7 @@ double *Parameter::getQuadricLimitersDouble()
 {
     return this->hostQuadricLimiters;
 }
-real *Parameter::getQuadricLimitersHost()
+real *Parameter::getQuadricLimitersHost() const
 {
     return this->quadricLimitersH;
 }
@@ -1283,7 +1283,7 @@ std::shared_ptr<LBMSimulationParameter> Parameter::getParD(int level)
 {
     return parD[level];
 }
-std::shared_ptr<LBMSimulationParameter> Parameter::getParH(int level)
+std::shared_ptr<LBMSimulationParameter> Parameter::getParH(int level) const
 {
     return parH[level];
 }
@@ -1335,7 +1335,7 @@ int Parameter::getMaxLevel() const
 {
     return this->maxlevel;
 }
-unsigned int Parameter::getTimestepStart()
+unsigned int Parameter::getTimestepStart() const
 {
     if (getDoRestart()) {
         return getTimeDoRestart() + 1;
@@ -1351,7 +1351,7 @@ unsigned int Parameter::getTimestepInit()
         return 0;
     }
 }
-unsigned int Parameter::getTimestepEnd()
+unsigned int Parameter::getTimestepEnd() const
 {
     return this->tend;
 }
@@ -1387,7 +1387,7 @@ std::string Parameter::getOutputPath()
 {
     return this->oPath;
 }
-std::string Parameter::getOutputPrefix()
+std::string Parameter::getOutputPrefix() const
 {
     return this->oPrefix;
 }
@@ -1423,11 +1423,11 @@ real Parameter::getConcentrationBC()
 {
     return this->concentrationBC;
 }
-real Parameter::getViscosity()
+real Parameter::getViscosity() const
 {
     return this->vis;
 }
-real Parameter::getVelocity()
+real Parameter::getVelocity() const
 {
     return this->u0;
 }
@@ -1455,11 +1455,11 @@ int Parameter::getNumprocs() const
 {
     return this->numprocs;
 }
-std::vector<uint> Parameter::getDevices()
+std::vector<uint> Parameter::getDevices() const
 {
     return this->devices;
 }
-real Parameter::getRe()
+real Parameter::getRe() const
 {
     return this->Re;
 }
@@ -1743,7 +1743,7 @@ unsigned int Parameter::getTimeDoCheckPoint()
 {
     return this->tDoCheckPoint;
 }
-unsigned int Parameter::getTimeDoRestart()
+unsigned int Parameter::getTimeDoRestart() const
 {
     return this->tDoRestart;
 }
@@ -1771,7 +1771,7 @@ bool Parameter::getDoCheckPoint()
 {
     return this->doCheckPoint;
 }
-bool Parameter::getDoRestart()
+bool Parameter::getDoRestart() const
 {
     return this->doRestart;
 }
@@ -1803,13 +1803,13 @@ bool Parameter::getHasWallModelMonitor()
 {
     return this->hasWallModelMonitor;
 }
-std::vector<SPtr<PreCollisionInteractor>> Parameter::getActuators()
+std::vector<SPtr<PreCollisionInteractor>> Parameter::getInteractors()
 {
-    return actuators;
+    return interactors;
 }
-std::vector<SPtr<PreCollisionInteractor>> Parameter::getProbes()
+std::vector<SPtr<Sampler>> Parameter::getSamplers()
 {
-    return probes;
+    return samplers;
 }
 bool Parameter::getUseInitNeq()
 {
@@ -1922,7 +1922,7 @@ bool Parameter::getIsNeighborZ()
     return this->isNeigborZ;
 }
 
-std::string Parameter::getMainKernel()
+std::string Parameter::getMainKernel() const
 {
     return mainKernel;
 }

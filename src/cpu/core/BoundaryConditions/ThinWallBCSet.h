@@ -38,14 +38,14 @@
 
 #include "BCSet.h"
 
-class ILBMKernel;
+class LBMKernel;
 
 class ThinWallBCSet : public BCSet
 {
 public:
     ThinWallBCSet() = default;
-    explicit ThinWallBCSet(SPtr<ILBMKernel> kernel);
-    SPtr<BCSet> clone(SPtr<ILBMKernel> kernel) override;
+    explicit ThinWallBCSet(SPtr<LBMKernel> kernel);
+    SPtr<BCSet> clone(SPtr<LBMKernel> kernel) override;
     void applyPostCollisionBC(); // FIXME: should the base method virtual??
 protected:
 private:

@@ -102,9 +102,9 @@ public:
 //!
 //! Rangecheck active, if:
 //!
-//! -debug  : not defined "NO_CB_RANGECHECK"
+//! -debug  : not defined "VF_NO_RANGECHECK"
 //!
-//! -release: not defined "NO_CB_RANGECHECK" && defined "CB_RANGECHECK"
+//! -release: not defined "VF_NO_RANGECHECK" && defined "VF_RANGECHECK"
 //////////////////////////////////////////////////////////////////////////
 template <typename T, typename IndexClass = IndexerX2X1>
 class CbArray2D
@@ -235,7 +235,7 @@ public:
     /*=======================================================================*/
     reference operator()(const size_type &x1, const size_type &x2)
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -245,7 +245,7 @@ public:
     /*=======================================================================*/
     const_reference operator()(const size_type &x1, const size_type &x2) const
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -255,7 +255,7 @@ public:
     /*=======================================================================*/
     pointer getStartAdressOfSortedArray(const size_type &x1, const size_type &x2)
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -264,7 +264,7 @@ public:
     /*=======================================================================*/
     const_pointer getStartAdressOfSortedArray(const size_type &x1, const size_type &x2) const
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -273,7 +273,7 @@ public:
     /*=======================================================================*/
     void setObject(const size_type &x1, const size_type &x2, const value_type &value)
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -282,7 +282,7 @@ public:
     /*=======================================================================*/
     reference getObject(const size_type &x1, const size_type &x2)
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif
@@ -351,7 +351,7 @@ public:
     /*=======================================================================*/
     inline size_type getDataVectorIndex(const size_type &x1, const size_type &x2) const
     {
-#if !defined(NO_CB_RANGECHECK) && (defined(_DEBUG) || defined(CB_RANGECHECK))
+#if !defined(VF_NO_RANGECHECK) && (defined(VF_DEBUG) || defined(VF_RANGECHECK))
         if (!this->indicesInRange(x1, x2))
             UB_THROW(UbException(UB_EXARGS, getExceptionErrorString(x1, x2)));
 #endif

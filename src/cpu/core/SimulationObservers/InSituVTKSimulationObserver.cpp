@@ -162,7 +162,7 @@ void InSituVTKSimulationObserver::addData(SPtr<Block3D> block)
     UbTupleDouble3 nodeOffset   = grid->getNodeOffset(block);
     real dx                   = grid->getDeltaX(block);
 
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
     real f[D3Q27System::ENDF + 1];

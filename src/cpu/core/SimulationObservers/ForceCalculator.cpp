@@ -102,7 +102,7 @@ void ForceCalculator::calculateForces(std::vector<SPtr<D3Q27Interactor>> interac
             real forceX3 = c0o1;
 
             SPtr<Block3D> block                     = t.first;
-            SPtr<ILBMKernel> kernel                 = block->getKernel();
+            SPtr<LBMKernel> kernel                 = block->getKernel();
             SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
             SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
             distributions->swap();

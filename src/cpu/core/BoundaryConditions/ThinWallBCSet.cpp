@@ -38,9 +38,9 @@
 #include "LBMKernel.h"
 
 //////////////////////////////////////////////////////////////////////////
-ThinWallBCSet::ThinWallBCSet(SPtr<ILBMKernel> kernel) : BCSet(kernel) {}
+ThinWallBCSet::ThinWallBCSet(SPtr<LBMKernel> kernel) : BCSet(kernel) {}
 //////////////////////////////////////////////////////////////////////////
-SPtr<BCSet> ThinWallBCSet::clone(SPtr<ILBMKernel> kernel)
+SPtr<BCSet> ThinWallBCSet::clone(SPtr<LBMKernel> kernel)
 {
     SPtr<BCSet> BCSet(new ThinWallBCSet(kernel));
     return BCSet;

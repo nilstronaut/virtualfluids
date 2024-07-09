@@ -156,7 +156,7 @@ void WriteMacroscopicQuantitiesSimulationObserver::addDataMQ(SPtr<Block3D> block
 
     data.resize(datanames.size());
 
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
     real f[D3Q27System::ENDF + 1];

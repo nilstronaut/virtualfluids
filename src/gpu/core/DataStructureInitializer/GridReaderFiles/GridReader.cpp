@@ -121,7 +121,7 @@ void GridReader::allocArrays_CoordNeighborGeo()
     VF_LOG_TRACE("-----finish Config Arrays Coord, Neighbor, Geo------");
 }
 
-void GridReader::allocArrays_BoundaryValues()
+void GridReader::allocArrays_BoundaryValues(const BoundaryConditionFactory* /*bcFactory*/)
 {
     VF_LOG_TRACE("------read BoundaryValues-------");
     

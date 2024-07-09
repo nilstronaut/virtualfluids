@@ -74,7 +74,7 @@ void DecreaseViscositySimulationObserver::setViscosity(real step)
             std::vector<SPtr<Block3D>> blockVector;
             grid->getBlocks(level, gridRank, blockVector);
             for (SPtr<Block3D> block : blockVector) {
-                SPtr<ILBMKernel> kernel = block->getKernel();
+                SPtr<LBMKernel> kernel = block->getKernel();
             }
         }
 
@@ -87,7 +87,7 @@ void DecreaseViscositySimulationObserver::setViscosity(real step)
             std::vector<SPtr<Block3D>> blockVector;
             grid->getBlocks(level, gridRank, blockVector);
             for (SPtr<Block3D> block : blockVector) {
-                SPtr<ILBMKernel> kernel = block->getKernel();
+                SPtr<LBMKernel> kernel = block->getKernel();
                 if (kernel) {
                     real collFactor = LBMSystem::calcCollisionFactor(nue, block->getLevel());
                     kernel->setCollisionFactor(collFactor);

@@ -319,7 +319,7 @@ void FineToCoarseVectorConnector<VectorTransmitter>::fillSendVectors()
 
     ///////////////////////////////////////
     /// DEBUG
-#ifdef _DEBUG
+#ifdef VF_DEBUG
     // if (block.lock()->getGlobalID() == 2558)
     //{
     //   int test = 0;

@@ -153,7 +153,7 @@ void IntegrateValuesHelper::calculateAV()
     clearData();
 
     for (CalcNodes cn : cnodes) {
-        SPtr<ILBMKernel> kernel                   = cn.block->getKernel();
+        SPtr<LBMKernel> kernel                   = cn.block->getKernel();
         SPtr<AverageValuesArray3D> averagedValues = kernel->getDataSet()->getAverageValues();
 
         for (UbTupleInt3 node : cn.nodes) {
@@ -220,7 +220,7 @@ void IntegrateValuesHelper::calculateMQ()
     CalcMacrosFct calcMacros = NULL;
 
     for (CalcNodes cn : cnodes) {
-        SPtr<ILBMKernel> kernel = cn.block->getKernel();
+        SPtr<LBMKernel> kernel = cn.block->getKernel();
         real dx              = c1o1 / (real)(1 << cn.block->getLevel());
         real cellVolume      = dx * dx * dx;
 

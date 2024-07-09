@@ -195,10 +195,6 @@ void LevelGridBuilder::setVelocityGeometryBoundaryCondition(real vx, real vy, re
 
 void LevelGridBuilder::setPressureBoundaryCondition(SideType sideType, real rho)
 {
-    if (sideType != SideType::PX)
-        throw std::runtime_error(
-            "The pressure boundary condition is currently only supported at the side PX"); // https://git.rz.tu-bs.de/irmb/VirtualFluids_dev/-/issues/176
-
     for (uint level = 0; level < getNumberOfGridLevels(); level++)
     {
         SPtr<PressureBoundaryCondition> pressureBoundaryCondition = PressureBoundaryCondition::make(rho);
@@ -686,6 +682,46 @@ void LevelGridBuilder::getPressureQs(real* qs[27], int level) const
         }
     }
 }
+
+size_t LevelGridBuilder::getNumberOfPressureBoundaryConditions(uint level) const
+{
+    return boundaryConditions[level]->pressureBoundaryConditions.size();
+}
+
+size_t LevelGridBuilder::getSizeOfPressureBoundaryCondition(uint level, uint indexInBoundaryConditionVector) const
+{
+    return boundaryConditions[level]->pressureBoundaryConditions[indexInBoundaryConditionVector]->indices.size();
+}
+
+void LevelGridBuilder::getPressureValues(real* density, int* indices, int* neighborIndices, uint level,
+                                         uint indexInBoundaryConditionVector) const
+{
+    auto boundaryCondition = boundaryConditions[level]->pressureBoundaryConditions[indexInBoundaryConditionVector];
+
+    for (std::size_t index = 0; index < boundaryCondition->indices.size(); index++) {
+        indices[index] = grids[level]->getSparseIndex(boundaryCondition->indices[index]) + 1;
+
+        neighborIndices[index] = grids[level]->getSparseIndex(boundaryCondition->neighborIndices[index]) + 1;
+
+        density[index] = boundaryCondition->rho;
+    }
+}
+
+void LevelGridBuilder::getPressureQs(real* qs[27], uint level, uint indexInBoundaryConditionVector) const
+{
+    auto boundaryCondition = boundaryConditions[level]->pressureBoundaryConditions[indexInBoundaryConditionVector];
+
+    for (uint index = 0; index < boundaryCondition->indices.size(); index++) {
+        for (int dir = 0; dir <= grids[level]->getEndDirection(); dir++) {
+            qs[dir][index] = boundaryCondition->qs[index][dir];
+        }
+    }
+}
+
+size_t LevelGridBuilder::getPressureBoundaryConditionDirection(uint level, uint indexInBoundaryConditionVector) const
+{
+    return boundaryConditions[level]->pressureBoundaryConditions[indexInBoundaryConditionVector]->side->getD3Q27Direction();
+};
 
 uint LevelGridBuilder::getPrecursorSize(int level) const
 {

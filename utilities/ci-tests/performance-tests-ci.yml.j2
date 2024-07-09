@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
+
+image: git.rz.tu-bs.de:4567/irmb/virtualfluids/ubuntu22_04:1.2
+
+stages: 
+  - test
+
+.performance-test:
+  stage: test
+
+  needs: []
+
+  tags:
+    - gpu
+    - linux
+
+  before_script:
+    - chmod -R +x ./tests/performance-tests/*
+    - apt-get update && apt-get install -y git-lfs
+
+  artifacts:
+    expire_in: 12 hrs
+    paths:
+      - output/
+    when: on_failure
+
+{% for performance_test in test_jobs %}
+run-performance-test-{{ performance_test[1] }}-{{ performance_test[0] }}:
+  extends: .performance-test
+
+  script:
+    - ./tests/performance-tests/{{ performance_test[1] }}/{{ performance_test[0] }}.sh
+
+{% endfor %}

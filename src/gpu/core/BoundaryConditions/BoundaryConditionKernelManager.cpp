@@ -50,15 +50,19 @@
 #include "BoundaryConditions/Pressure/Pressure.h"
 
 
-BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> parameter, BoundaryConditionFactory *bcFactory) : para(parameter)
+BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> parameter, const BoundaryConditionFactory *bcFactory) : para(parameter)
 {
     this->velocityBoundaryConditionPost = bcFactory->getVelocityBoundaryConditionPost();
-    this->noSlipBoundaryConditionPost   = bcFactory->getNoSlipBoundaryConditionPost();
-    this->slipBoundaryConditionPost     = bcFactory->getSlipBoundaryConditionPost();
-    this->pressureBoundaryConditionPre  = bcFactory->getPressureBoundaryConditionPre();
+    this->noSlipBoundaryConditionPost = bcFactory->getNoSlipBoundaryConditionPost();
+    this->slipBoundaryConditionPost = bcFactory->getSlipBoundaryConditionPost();
     this->geometryBoundaryConditionPost = bcFactory->getGeometryBoundaryConditionPost();
-    this->stressBoundaryConditionPost   = bcFactory->getStressBoundaryConditionPost();
+    this->stressBoundaryConditionPost = bcFactory->getStressBoundaryConditionPost();
     this->precursorBoundaryConditionPost = bcFactory->getPrecursorBoundaryConditionPost();
+
+    if (bcFactory->hasDirectionalPressureBoundaryCondition())
+        this->directionalPressureBoundaryConditionPre = std::get<directionalBoundaryCondition>(bcFactory->getPressureBoundaryConditionPre());
+    else
+        this->pressureBoundaryConditionPre = std::get<boundaryCondition>(bcFactory->getPressureBoundaryConditionPre());
 
     checkBoundaryCondition(this->velocityBoundaryConditionPost, this->para->getParD(0)->velocityBC,
                            "velocityBoundaryConditionPost");
@@ -66,17 +70,19 @@ BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> p
                            "noSlipBoundaryConditionPost");
     checkBoundaryCondition(this->slipBoundaryConditionPost, this->para->getParD(0)->slipBC,
                            "slipBoundaryConditionPost");
-    checkBoundaryCondition(this->pressureBoundaryConditionPre, this->para->getParD(0)->pressureBC,
-                           "pressureBoundaryConditionPre");
     checkBoundaryCondition(this->geometryBoundaryConditionPost, this->para->getParD(0)->geometryBC,
                            "geometryBoundaryConditionPost");
     checkBoundaryCondition(this->stressBoundaryConditionPost, this->para->getParD(0)->stressBC,
                            "stressBoundaryConditionPost");
     checkBoundaryCondition(this->precursorBoundaryConditionPost, this->para->getParD(0)->precursorBC,
                            "precursorBoundaryConditionPost");
+    checkBoundaryCondition(this->pressureBoundaryConditionPre, this->para->getParD(0)->pressureBC,
+                           "pressureBoundaryConditionPre");
+    checkBoundaryCondition(this->directionalPressureBoundaryConditionPre, this->para->getParD(0)->pressureBCDirectional,
+                           "directionalPressureBoundaryConditionPre");
 }
 
-void BoundaryConditionKernelManager::runVelocityBCKernelPre(const int level) const
+void BoundaryConditionKernelManager::runVelocityBCKernelPre(int level) const
 {
     if (para->getParD(level)->velocityBC.numberOfBCnodes > 0)
     {
@@ -118,7 +124,7 @@ void BoundaryConditionKernelManager::runVelocityBCKernelPre(const int level) con
     }
 }
 
-void BoundaryConditionKernelManager::runVelocityBCKernelPost(const int level) const
+void BoundaryConditionKernelManager::runVelocityBCKernelPost(int level) const
 {
      if (para->getParD(level)->velocityBC.numberOfBCnodes > 0)
      {
@@ -140,7 +146,7 @@ void BoundaryConditionKernelManager::runVelocityBCKernelPost(const int level) co
      }
 }
 
-void BoundaryConditionKernelManager::runGeoBCKernelPre(const int level, unsigned int t, CudaMemoryManager* cudaMemoryManager) const{
+void BoundaryConditionKernelManager::runGeoBCKernelPre(int level, unsigned int t, CudaMemoryManager* cudaMemoryManager) const{
     if (para->getParD(level)->geometryBC.numberOfBCnodes > 0){
         if (para->getCalcDragLift())
         {
@@ -248,7 +254,7 @@ void BoundaryConditionKernelManager::runGeoBCKernelPre(const int level, unsigned
     }
 }
 
-void BoundaryConditionKernelManager::runGeoBCKernelPost(const int level) const
+void BoundaryConditionKernelManager::runGeoBCKernelPost(int level) const
 {
     if (para->getParD(level)->geometryBC.numberOfBCnodes > 0)
     {
@@ -312,27 +318,27 @@ void BoundaryConditionKernelManager::runGeoBCKernelPost(const int level) const
     }
 }
 
-void BoundaryConditionKernelManager::runOutflowBCKernelPre(const int level) const{
-    if (para->getParD(level)->outflowBC.numberOfBCnodes > 0)
-        OutflowNonReflecting(para->getParD(level).get(), &(para->getParD(level)->outflowBC));
-}
-
-void BoundaryConditionKernelManager::runPressureBCKernelPre(const int level) const{
+void BoundaryConditionKernelManager::runPressureBCKernelPre(int level) const
+{
+    for (auto boundaryConditionStruct : para->getParD(level)->pressureBCDirectional) {
+        this->directionalPressureBoundaryConditionPre(para->getParD(level).get(), &boundaryConditionStruct);
+    }
     if (para->getParD(level)->pressureBC.numberOfBCnodes > 0)
         this->pressureBoundaryConditionPre(para->getParD(level).get(), &(para->getParD(level)->pressureBC));
 }
 
-void BoundaryConditionKernelManager::runStressWallModelKernelPost(const int level) const{
+void BoundaryConditionKernelManager::runStressWallModelKernelPost(int level) const
+{
     if (para->getParD(level)->stressBC.numberOfBCnodes > 0)
         stressBoundaryConditionPost(para.get(), &(para->getParD(level)->stressBC), level);
 }
 
-void BoundaryConditionKernelManager::runSlipBCKernelPost(const int level) const{
+void BoundaryConditionKernelManager::runSlipBCKernelPost(int level) const{
     if (para->getParD(level)->slipBC.numberOfBCnodes > 0)
         slipBoundaryConditionPost(para->getParD(level).get(), &(para->getParD(level)->slipBC));
 }
 
-void BoundaryConditionKernelManager::runNoSlipBCKernelPost(const int level) const{
+void BoundaryConditionKernelManager::runNoSlipBCKernelPost(int level) const{
     if (para->getParD(level)->noSlipBC.numberOfBCnodes > 0)
         noSlipBoundaryConditionPost(para->getParD(level).get(), &(para->getParD(level)->noSlipBC));
 }

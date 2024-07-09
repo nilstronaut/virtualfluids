@@ -31,24 +31,12 @@
 //! \{
 //! \author Martin Schoenherr, Anna Wellmann
 //=======================================================================================
-#define _USE_MATH_DEFINES
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 
-//////////////////////////////////////////////////////////////////////////
-
 #include <basics/DataTypes.h>
-#include <basics/PointerDefinitions.h>
 #include <basics/config/ConfigurationFile.h>
-#include <logger/Logger.h>
-#include <parallel/MPICommunicator.h>
 
-//////////////////////////////////////////////////////////////////////////
+#include <logger/Logger.h>
 
 #include "GridGenerator/geometries/Cuboid/Cuboid.h"
 #include "GridGenerator/geometries/Sphere/Sphere.h"
@@ -58,212 +46,173 @@
 #include "GridGenerator/grid/GridBuilder/MultipleGridBuilder.h"
 #include "GridGenerator/grid/GridFactory.h"
 
-//////////////////////////////////////////////////////////////////////////
-
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
-#include "gpu/core/DataStructureInitializer/GridProvider.h"
-#include "gpu/core/DataStructureInitializer/GridReaderGenerator/GridGenerator.h"
-#include "gpu/core/Cuda/CudaMemoryManager.h"
+#include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/GridScaling/GridScalingFactory.h"
 #include "gpu/core/Kernel/KernelTypes.h"
-#include "gpu/core/Calculation/Simulation.h"
-#include "gpu/core/Output/FileWriter.h"
 #include "gpu/core/Parameter/Parameter.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PlaneProbe.h"
-#include "gpu/core/PreCollisionInteractor/Probes/PointProbe.h"
+#include "gpu/core/Samplers/Probe.h"
+#include "gpu/core/Cuda/CudaMemoryManager.h"
 
-//////////////////////////////////////////////////////////////////////////
+void run(const vf::basics::ConfigurationFile& config)
+{
+    //////////////////////////////////////////////////////////////////////////
+    // Simulation parameters
+    //////////////////////////////////////////////////////////////////////////
+    std::string path("output/Sphere");
+    std::string simulationName("SphereInChannel");
+
+    const real reynoldsNumber = 300.0;
+    const real velocity = 1.0;
+    const real velocityLB = (real)0.5e-2; // LB units
+    const uint numberOfNodesSphere = 10;
+    const real dSphere =
+        0.2; // Caution, this App uses an STL for the sphere, so this setting does not change the size of the sphere
+
+    const uint timeStepOut = 10000;
+    const uint timeStepEnd = 10000;
+
+    bool refine = false;
+    if (config.contains("refine"))
+        refine = config.getValue<bool>("refine");
+
+    if (config.contains("output_path"))
+        path = config.getValue<std::string>("output_path");
+
+    //////////////////////////////////////////////////////////////////////////
+    // compute parameters in lattice units
+    //////////////////////////////////////////////////////////////////////////
+
+    const real deltaX = dSphere / real(numberOfNodesSphere);
+    const real viscosityLB = velocityLB / reynoldsNumber; // LB units
+
+    //////////////////////////////////////////////////////////////////////////
+    // create grid
+    //////////////////////////////////////////////////////////////////////////
+
+    auto gridBuilder = std::make_shared<MultipleGridBuilder>();
+
+    gridBuilder->addCoarseGrid(-3 * dSphere, -3 * dSphere, -3 * dSphere, 10 * dSphere, 3 * dSphere, 3 * dSphere, deltaX);
+
+    // add geometry: use primitive
+    // auto sphere = std::make_shared<Sphere>(0.0, 0.0, 0.0, dSphere / 2.0);
+
+    // add geometry: use stl
+    std::string stlPath = "./apps/gpu/SphereInChannel/sphere02.stl";
+    std::cout << "Reading stl from " << stlPath << "." << std::endl;
+    auto sphere = std::make_shared<TriangularMesh>(stlPath);
+
+    gridBuilder->addGeometry(sphere);
+    gridBuilder->setPeriodicBoundaryCondition(false, false, false);
+
+    // add two fine grids
+    if (refine) {
+        gridBuilder->addGrid(std::make_shared<Sphere>(0., 0., 0., dSphere), 2);
+    }
+
+    GridScalingFactory scalingFactory = GridScalingFactory();
+    scalingFactory.setScalingFactory(GridScalingFactory::GridScaling::ScaleCompressible);
+
+    gridBuilder->buildGrids(false);
+
+    //////////////////////////////////////////////////////////////////////////
+    // set parameters
+    //////////////////////////////////////////////////////////////////////////
+    SPtr<Parameter> para = std::make_shared<Parameter>();
+
+    para->setOutputPath(path);
+    para->setOutputPrefix(simulationName);
+
+    para->setPrintFiles(true);
+
+    para->setVelocityLB(velocityLB);
+    para->setViscosityLB(viscosityLB);
+
+    para->setVelocityRatio(velocity / velocityLB);
+    para->setDensityRatio(1.0);
+
+    para->setTimestepOut(timeStepOut);
+    para->setTimestepEnd(timeStepEnd);
+
+    para->configureMainKernel(vf::collisionKernel::compressible::K17CompressibleNavierStokes);
+
+    //////////////////////////////////////////////////////////////////////////
+    // set boundary conditions
+    //////////////////////////////////////////////////////////////////////////
+
+    gridBuilder->setPressureBoundaryCondition(SideType::PX, 0.0);
+    gridBuilder->setVelocityBoundaryCondition(SideType::MX, velocityLB, 0.0, 0.0);
+    gridBuilder->setSlipBoundaryCondition(SideType::PY, 0.0, 0.0, 0.0);
+    gridBuilder->setSlipBoundaryCondition(SideType::MY, 0.0, 0.0, 0.0);
+    gridBuilder->setSlipBoundaryCondition(SideType::MZ, 0.0, 0.0, 0.0);
+    gridBuilder->setSlipBoundaryCondition(SideType::PZ, 0.0, 0.0, 0.0);
+
+    gridBuilder->setVelocityBoundaryCondition(SideType::GEOMETRY, 0.0, 0.0, 0.0);
+
+    BoundaryConditionFactory bcFactory;
+
+    bcFactory.setSlipBoundaryCondition(BoundaryConditionFactory::SlipBC::SlipCompressible);
+    bcFactory.setVelocityBoundaryCondition(BoundaryConditionFactory::VelocityBC::VelocityInterpolatedCompressible);
+    bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumCompressible);
+
+    //////////////////////////////////////////////////////////////////////////
+    // setup probe(s)
+    //////////////////////////////////////////////////////////////////////////
+
+    auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
+
+    const uint tStartAveraging = 0;
+    const uint tAveraging = 100;
+    const uint tStartOutProbe = 0;
+    const uint tOutProbe = para->getTimestepOut();
+    SPtr<Probe> pointProbe = std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), "pointProbe",
+                                                     tStartAveraging, tAveraging, tStartOutProbe, tOutProbe, false, false);
+    std::vector<real> probeCoordsX = { 0.3, 0.5 };
+    std::vector<real> probeCoordsY = { 0.0, 0.0 };
+    std::vector<real> probeCoordsZ = { 0.0, 0.0 };
+    pointProbe->addProbePointsFromList(probeCoordsX, probeCoordsY, probeCoordsZ);
+
+    pointProbe->addStatistic(Probe::Statistic::Instantaneous);
+    pointProbe->addStatistic(Probe::Statistic::Means);
+    pointProbe->addStatistic(Probe::Statistic::Variances);
+    para->addSampler(pointProbe);
+
+    SPtr<Probe> planeProbe = std::make_shared<Probe>(para, cudaMemoryManager, para->getOutputPath(), "planeProbe",
+                                                     tStartAveraging, tAveraging, tStartOutProbe, tOutProbe, false, false);
+    planeProbe->addProbePlane(0.4, 0, 0, 0.3, 0.01, 0.1);
+    planeProbe->addStatistic(Probe::Statistic::Instantaneous);
+    para->addSampler(planeProbe);
+
+    //////////////////////////////////////////////////////////////////////////
+    // initial state of the flow field
+    //////////////////////////////////////////////////////////////////////////
+
+    para->setInitialCondition([&](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
+        rho = c0o1;
+        vx = velocityLB;
+        vy = c0o1;
+        vz = c0o1;
+    });
+
+    //////////////////////////////////////////////////////////////////////////
+    // run simulation
+    //////////////////////////////////////////////////////////////////////////
+
+    Simulation simulation(para, cudaMemoryManager, gridBuilder, &bcFactory, &scalingFactory);
+    simulation.run();
+}
 
 int main(int argc, char* argv[])
 {
     try {
         vf::logging::Logger::initializeLogger();
-        vf::parallel::Communicator& communicator = *vf::parallel::MPICommunicator::getInstance();
-
-        //////////////////////////////////////////////////////////////////////////
-        // Simulation parameters
-        //////////////////////////////////////////////////////////////////////////
-        std::string path("output/Sphere");
-        std::string simulationName("SphereInChannel");
-
-        const real reynoldsNumber = 300.0;
-        const real velocity = 1.0;
-        const real velocityLB = (real)0.5e-2; // LB units
-        const uint numberOfNodesSphere = 10;
-        const real dSphere =
-            0.2; // Caution, this App uses an STL for the sphere, so this setting does not change the size of the sphere
-
-        const uint timeStepOut = 10000;
-        const uint timeStepEnd = 10000;
-
         vf::basics::ConfigurationFile config =
             vf::basics::loadConfig(argc, argv, "/workspaces/VirtualFluids/apps/gpu/SphereInChannel/sphere_1level.cfg");
-
-        bool refine = false;
-        if (config.contains("refine"))
-            refine = config.getValue<bool>("refine");
-
-        if (config.contains("output_path"))
-            path = config.getValue<std::string>("output_path");
-
-        //////////////////////////////////////////////////////////////////////////
-        // compute parameters in lattice units
-        //////////////////////////////////////////////////////////////////////////
-
-        const real deltaX = dSphere / real(numberOfNodesSphere);
-        const real deltaT = velocityLB / velocity * deltaX;
-
-        const real viscosityLB = velocityLB / reynoldsNumber; // LB units
-
-        //////////////////////////////////////////////////////////////////////////
-        // create grid
-        //////////////////////////////////////////////////////////////////////////
-
-        auto gridBuilder = std::make_shared<MultipleGridBuilder>();
-
-        gridBuilder->addCoarseGrid(-3  * dSphere, -3 * dSphere, -3 * dSphere,
-                                    10 * dSphere,  3 * dSphere,  3 * dSphere, deltaX);
-
-        // add geometry: use primitive
-        // auto sphere = std::make_shared<Sphere>(0.0, 0.0, 0.0, dSphere / 2.0);
-
-        // add geometry: use stl
-        std::string stlPath = "./apps/gpu/SphereInChannel/sphere02.stl";
-        std::cout << "Reading stl from " << stlPath << "." << std::endl;
-        auto sphere = std::make_shared<TriangularMesh>(stlPath);
-
-        gridBuilder->addGeometry(sphere);
-        gridBuilder->setPeriodicBoundaryCondition(false, false, false);
-
-        // add two fine grids
-        if (refine) {
-            gridBuilder->addGrid(std::make_shared<Sphere>(0., 0., 0., dSphere), 2);
-        }
-
-        GridScalingFactory scalingFactory = GridScalingFactory();
-        scalingFactory.setScalingFactory(GridScalingFactory::GridScaling::ScaleCompressible);
-
-        gridBuilder->buildGrids(false);
-
-        //////////////////////////////////////////////////////////////////////////
-        // set parameters
-        //////////////////////////////////////////////////////////////////////////
-        SPtr<Parameter> para = std::make_shared<Parameter>();
-
-        para->setOutputPath(path);
-        para->setOutputPrefix(simulationName);
-
-        para->setPrintFiles(true);
-
-        para->setVelocityLB(velocityLB);
-        para->setViscosityLB(viscosityLB);
-
-        para->setVelocityRatio(velocity / velocityLB);
-        para->setDensityRatio(1.0);
-
-        para->setTimestepOut(timeStepOut);
-        para->setTimestepEnd(timeStepEnd);
-
-        para->configureMainKernel(vf::collisionKernel::compressible::K17CompressibleNavierStokes);
-
-        //////////////////////////////////////////////////////////////////////////
-        // set boundary conditions
-        //////////////////////////////////////////////////////////////////////////
-
-        gridBuilder->setPressureBoundaryCondition(SideType::PX, 0.0);
-        gridBuilder->setVelocityBoundaryCondition(SideType::MX, velocityLB, 0.0, 0.0);
-        gridBuilder->setSlipBoundaryCondition(SideType::PY, 0.0, 0.0, 0.0);
-        gridBuilder->setSlipBoundaryCondition(SideType::MY, 0.0, 0.0, 0.0);
-        gridBuilder->setSlipBoundaryCondition(SideType::MZ, 0.0, 0.0, 0.0);
-        gridBuilder->setSlipBoundaryCondition(SideType::PZ, 0.0, 0.0, 0.0);
-
-        gridBuilder->setVelocityBoundaryCondition(SideType::GEOMETRY, 0.0, 0.0, 0.0);
-
-        BoundaryConditionFactory bcFactory;
-
-        bcFactory.setSlipBoundaryCondition(BoundaryConditionFactory::SlipBC::SlipCompressible);
-        bcFactory.setVelocityBoundaryCondition(BoundaryConditionFactory::VelocityBC::VelocityInterpolatedCompressible);
-        bcFactory.setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC::PressureNonEquilibriumCompressible);
-
-        //////////////////////////////////////////////////////////////////////////
-        // setup probe(s)
-        //////////////////////////////////////////////////////////////////////////
-
-        const uint tStartAveraging = 0;
-        const uint tAveraging = 100;
-        const uint tStartOutProbe = 0;
-        const uint tOutProbe = para->getTimestepOut();
-        SPtr<PointProbe> pointProbe = std::make_shared<PointProbe>("pointProbe", para->getOutputPath(), tStartAveraging,
-                                                                   tAveraging, tStartOutProbe, tOutProbe);
-        std::vector<real> probeCoordsX = { 0.3, 0.5 };
-        std::vector<real> probeCoordsY = { 0.0, 0.0 };
-        std::vector<real> probeCoordsZ = { 0.0, 0.0 };
-        pointProbe->addProbePointsFromList(probeCoordsX, probeCoordsY, probeCoordsZ);
-
-        pointProbe->addStatistic(Statistic::Instantaneous);
-        pointProbe->addStatistic(Statistic::Means);
-        pointProbe->addStatistic(Statistic::Variances);
-        para->addProbe(pointProbe);
-
-        SPtr<PlaneProbe> planeProbe = std::make_shared<PlaneProbe>("planeProbe", para->getOutputPath(), tStartAveraging,
-                                                                   tAveraging, tStartOutProbe, tOutProbe);
-        planeProbe->setProbePlane(0.4, 0, 0, 0.3, 0.01, 0.1);
-        planeProbe->addStatistic(Statistic::Instantaneous);
-        para->addProbe(planeProbe);
-
-        //////////////////////////////////////////////////////////////////////////
-        // initial state of the flow field
-        //////////////////////////////////////////////////////////////////////////
-
-        para->setInitialCondition([&](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-            rho = c0o1;
-            vx = velocityLB;
-            vy = c0o1;
-            vz = c0o1;
-        });
-
-        //////////////////////////////////////////////////////////////////////////
-        // set copy mesh to simulation
-        //////////////////////////////////////////////////////////////////////////
-
-        auto cudaMemoryManager = std::make_shared<CudaMemoryManager>(para);
-        SPtr<GridProvider> gridGenerator =
-            GridProvider::makeGridGenerator(gridBuilder, para, cudaMemoryManager, communicator);
-
-        //////////////////////////////////////////////////////////////////////////
-        // run simulation
-        //////////////////////////////////////////////////////////////////////////
-
-        VF_LOG_INFO("Start Running DrivenCavity Showcase...");
-        printf("\n");
-        VF_LOG_INFO("world parameter:");
-        VF_LOG_INFO("--------------");
-        VF_LOG_INFO("delta t [s]            = {}", deltaT);
-        VF_LOG_INFO("dSphere [m]            = {}", dSphere);
-        VF_LOG_INFO("world_velocity [m/s]   = {}", velocity);
-        VF_LOG_INFO("delta x [m]            = {}", deltaX);
-        printf("\n");
-        VF_LOG_INFO("LB parameter:");
-        VF_LOG_INFO("--------------");
-        VF_LOG_INFO("Re                     = {}", reynoldsNumber);
-        VF_LOG_INFO("lb_velocity [dx/dt]    = {}", velocityLB);
-        VF_LOG_INFO("lb_viscosity [dx^2/dt] = {}", viscosityLB);
-        printf("\n");
-        VF_LOG_INFO("simulation parameter:");
-        VF_LOG_INFO("--------------");
-        VF_LOG_INFO("number of nodes in sphere = {}", numberOfNodesSphere);
-        VF_LOG_INFO("write_nth_timestep        = {}", timeStepOut);
-        VF_LOG_INFO("last timestep             = {}", timeStepEnd);
-        VF_LOG_INFO("output_path               = {}", path);
-
-        Simulation sim(para, cudaMemoryManager, communicator, *gridGenerator, &bcFactory, &scalingFactory);
-        sim.run();
-
+        run(config);
     } catch (const std::exception& e) {
         VF_LOG_WARNING("{}", e.what());
         return 1;
     }
-
     return 0;
 }
 

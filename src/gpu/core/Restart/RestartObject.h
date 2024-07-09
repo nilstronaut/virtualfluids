@@ -55,23 +55,27 @@ public:
     virtual void serialize_internal(const std::string &filename)   = 0;
     virtual void deserialize_internal(const std::string &filename) = 0;
 
+    void delete_restart_file(const std::string &filename);
+
 private:
     void clear(const std::shared_ptr<Parameter>& para);
+    virtual std::string getFileExtension() const = 0;
 };
-
 
 class ASCIIRestartObject : public RestartObject
 {
 private:
-    virtual void serialize_internal(const std::string &filename);
-    virtual void deserialize_internal(const std::string &filename);
+    void serialize_internal(const std::string& filename) override;
+    void deserialize_internal(const std::string& filename) override;
+    std::string getFileExtension() const override;
 };
 
 class BinaryRestartObject : public RestartObject
 {
 private:
-    virtual void serialize_internal(const std::string &filename);
-    virtual void deserialize_internal(const std::string &filename);
+    void serialize_internal(const std::string& filename) override;
+    void deserialize_internal(const std::string& filename) override;
+    std::string getFileExtension() const override;
 };
 
 #endif

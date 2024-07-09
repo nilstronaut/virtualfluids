@@ -42,7 +42,7 @@
 #include <basics/DataTypes.h>
 #include <basics/constants/NumericConstants.h>
 
-#include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 #include "Calculation/Calculation.h"
 #include "Parameter/Parameter.h"
 
@@ -75,7 +75,7 @@ __global__ void calcAMD(
     ////////////////////////////////////////////////////////////////////////////////
     //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
     //!
-    const unsigned nodeIndex = vf::gpu::getNodeIndex();
+    const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
     if(nodeIndex >= numberOfLBnodes) return;
     if(typeOfGridNode[nodeIndex] != GEO_FLUID) return;

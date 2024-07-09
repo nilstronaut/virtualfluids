@@ -43,6 +43,7 @@
 #include "FilePartCalculator.h"
 #include "Parameter/Parameter.h"
 #include "WriterUtilities.h"
+#include "Utilities/KernelUtilities.h"
 
 using namespace vf::lbm::dir;
 
@@ -70,7 +71,7 @@ void createNodeDataNames(std::vector<std::string>& nodeDataNames)
         const auto numberString = std::to_string(dir);
         nodeDataNames[dir] =
             "f_" + std::string(minLenghtOfNumberString - std::min(minLenghtOfNumberString, numberString.length()), '0') +
-            numberString;
+            numberString + " [" + vf::lbm::dir::directionNames.at(dir) + "]";
     }
 }
 
@@ -98,6 +99,8 @@ void DistributionDebugWriter::writeDistributionsForLevel(const Parameter& para, 
         throw std::runtime_error("Distributions (distributions.f[0]) at level " + std::to_string(level) +
                                  " are not allocated on the host. Can't write distributions.");
 
+    vf::gpu::getPointersToDistributions(distributions, distributions.f[0], parH.numberOfNodes, timestep % 2 == 0);
+
     for (unsigned int part = 0; part < numberOfParts; part++) {
         sizeOfNodes = FilePartCalculator::calculateNumberOfNodesInPart(parH.numberOfNodes, part);
         startPosition = FilePartCalculator::calculateStartingPostionOfPart(part);
@@ -119,8 +122,12 @@ void DistributionDebugWriter::writeDistributionsForLevel(const Parameter& para, 
             nodes[relativePositionInPart] =
                 makeUbTuple((float)parH.coordinateX[pos], (float)parH.coordinateY[pos], (float)parH.coordinateZ[pos]);
 
+            vf::gpu::ListIndices neighborIndices(pos, parH.neighborX, parH.neighborY, parH.neighborZ);
+            real fLocal[27];
+            vf::gpu::getPreCollisionDistribution(fLocal, distributions, neighborIndices);
+
             for (uint dir = STARTDIR; dir <= ENDDIR; dir++) {
-                nodeData[dir][relativePositionInPart] = distributions.f[0][dir * parH.numberOfNodes + pos];
+                nodeData[dir][relativePositionInPart] = fLocal[dir];
             }
 
             WriterUtilities::getIndicesOfAllNodesInOct(indicesOfOct, pos, parH);

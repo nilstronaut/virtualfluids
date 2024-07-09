@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
+
+image: git.rz.tu-bs.de:4567/irmb/virtualfluids/ubuntu22_04:1.2
+
+stages: 
+  - test
+
+.regression-test:
+  stage: test
+
+  needs: []
+
+  tags:
+    - gpu
+    - linux
+
+  before_script:
+    - chmod -R +x ./tests/regression-tests/*
+    - pip install fieldcompare
+    - apt-get update && apt-get install -y git-lfs
+
+  artifacts:
+    expire_in: 1 hrs
+    paths:
+      - output/
+    when: on_failure
+
+{% for regression_test in test_jobs %}
+run-regression-test-{{ regression_test[1] }}-{{ regression_test[0] }}:
+  extends: .regression-test
+
+  script:
+    - ./tests/regression-tests/{{ regression_test[1] }}/{{ regression_test[0] }}.sh
+
+{% endfor %}

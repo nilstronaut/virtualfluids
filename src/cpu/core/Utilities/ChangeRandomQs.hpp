@@ -49,7 +49,7 @@ namespace Utilities
       
       for(IntegrateValuesHelper::CalcNodes cn : cnodes)
       {
-         SPtr<ILBMKernel> kernel = cn.block->getKernel();
+         SPtr<LBMKernel> kernel = cn.block->getKernel();
          SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
          for(UbTupleInt3 node : cn.nodes)
          {

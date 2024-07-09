@@ -40,7 +40,7 @@
 #include "DataSet3D.h"
 #include "DistributionArray3D.h"
 #include "Grid3D.h"
-#include "ILBMKernel.h"
+#include "LBMKernel.h"
 #include "UbScheduler.h"
 #include "Vector3D.h"
 #include <sstream>
@@ -79,7 +79,7 @@ bool MicrophoneArraySimulationObserver::addMicrophone(Vector3D coords)
         UbTupleInt3 blockIndexes = grid->getBlockIndexes(coords[0], coords[1], coords[2], level);
         SPtr<Block3D> block = grid->getBlock(val<1>(blockIndexes), val<2>(blockIndexes), val<3>(blockIndexes), level);
         if (block) {
-            SPtr<ILBMKernel> kernel = block->getKernel();
+            SPtr<LBMKernel> kernel = block->getKernel();
             if (kernel) {
                 SPtr<BCArray3D> bcarray = kernel->getBCSet()->getBCArray();
                 UbTupleInt3 nodes       = grid->getNodeIndexes(block, coords[0], coords[1], coords[2]);

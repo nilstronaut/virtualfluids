@@ -118,7 +118,7 @@ void AverageValuesSimulationObserver::resetDataRMS(real step)
     for (int level = minInitLevel; level <= maxInitLevel; level++) {
         for (SPtr<Block3D> block : blockVector[level]) {
             if (block) {
-                SPtr<ILBMKernel> kernel                 = block->getKernel();
+                SPtr<LBMKernel> kernel                 = block->getKernel();
                 SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                 SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                 SPtr<AverageValuesArray3D> av           = kernel->getDataSet()->getAverageValues();
@@ -164,7 +164,7 @@ void AverageValuesSimulationObserver::resetDataMeans(real step)
     for (int level = minInitLevel; level <= maxInitLevel; level++) {
         for (SPtr<Block3D> block : blockVector[level]) {
             if (block) {
-                SPtr<ILBMKernel> kernel                 = block->getKernel();
+                SPtr<LBMKernel> kernel                 = block->getKernel();
                 SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                 SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                 SPtr<AverageValuesArray3D> av           = kernel->getDataSet()->getAverageValues();
@@ -274,7 +274,7 @@ void AverageValuesSimulationObserver::addData(const SPtr<Block3D> block)
 
     data.resize(datanames.size());
 
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
     SPtr<AverageValuesArray3D> av           = kernel->getDataSet()->getAverageValues();
@@ -385,7 +385,7 @@ void AverageValuesSimulationObserver::calculateAverageValues(real timeStep)
     for (int level = minInitLevel; level <= maxInitLevel; level++) {
         for (SPtr<Block3D> block : blockVector[level]) {
             if (block) {
-                SPtr<ILBMKernel> kernel                 = block->getKernel();
+                SPtr<LBMKernel> kernel                 = block->getKernel();
                 SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                 SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                 SPtr<AverageValuesArray3D> av           = kernel->getDataSet()->getAverageValues();

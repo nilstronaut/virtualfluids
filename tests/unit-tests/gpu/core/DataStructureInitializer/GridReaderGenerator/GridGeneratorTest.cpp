@@ -43,6 +43,7 @@
 #include "gpu/GridGenerator/grid/GridBuilder/LevelGridBuilder.h"
 #include "gpu/GridGenerator/grid/GridImp.h"
 #include "gpu/GridGenerator/utilities/communication.h"
+#include "parallel/Communicator.h"
 
 #include <parallel/NullCommunicator.h>
 
@@ -58,7 +59,7 @@ private:
 public:
     uint numberOfSendIndices = 0;
 
-    explicit LevelGridBuilderStub(SPtr<Grid> grid) : LevelGridBuilder(), grid(grid){};
+    explicit LevelGridBuilderStub(SPtr<Grid> grid) : grid(std::move(grid)){};
 
     uint getCommunicationProcess(int direction) override
     {
@@ -149,12 +150,11 @@ private:
         para->setNumprocs(2);
 
         builder = std::make_shared<LevelGridBuilderStub>(nullptr);
-        vf::parallel::NullCommunicator communicator;
+        auto communicator = vf::parallel::NullCommunicator::getInstance();
 
-        gridGenerator = std::make_shared<GridGenerator>(builder, para, std::make_shared<CudaMemoryManagerDouble>(para),
-                                                        communicator);
+        gridGenerator = std::make_shared<GridGenerator>(builder, para, std::make_shared<CudaMemoryManagerDouble>(para), *communicator);
         gridGenerator->setIndexRearrangementForStreams(
-            std::make_unique<IndexRearrangementForStreamsDouble>(para, builder, communicator));
+            std::make_unique<IndexRearrangementForStreamsDouble>(para, builder, *communicator));
     }
 };
 

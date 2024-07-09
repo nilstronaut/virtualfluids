@@ -152,9 +152,9 @@ ConfigurationFile loadConfig(int argc, char* argv[], std::string configPath)
 
     if (argc > 1) {
         configPath = argv[1];
-        VF_LOG_INFO("Using command line argument for config path: {}", configPath);
+        VF_LOG_TRACE("Using command line argument for config path: {}", configPath);
     } else {
-        VF_LOG_INFO("Using default config path: {}", configPath);
+        VF_LOG_TRACE("Using default config path: {}", configPath);
     }
 
     vf::basics::ConfigurationFile config;

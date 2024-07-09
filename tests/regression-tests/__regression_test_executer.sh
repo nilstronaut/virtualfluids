@@ -3,7 +3,7 @@
 
 download_reference_data () {
     rm -rf reference_data && mkdir -p reference_data
-    git clone --depth 1 --filter=blob:none --sparse https://github.com/irmb/test_data reference_data
+    git clone --depth 1 --filter=blob:none --sparse https://git.rz.tu-bs.de/irmb/virtualfluids-reference-data reference_data
     cd reference_data
     git sparse-checkout add $1
     cd ..

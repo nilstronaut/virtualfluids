@@ -148,24 +148,30 @@ boundaryCondition BoundaryConditionFactory::getSlipBoundaryConditionPost(bool is
     }
 }
 
-boundaryCondition BoundaryConditionFactory::getPressureBoundaryConditionPre() const
+std::variant<boundaryCondition, boundaryConditionDirectional>
+BoundaryConditionFactory::getPressureBoundaryConditionPre() const
 {
     // for descriptions of the boundary conditions refer to the header
     switch (this->pressureBoundaryCondition) {
         case PressureBC::PressureNonEquilibriumIncompressible:
-            return PressureNonEquilibriumIncompressible;
+            return (boundaryConditionDirectional)PressureNonEquilibriumIncompressible;
             break;
         case PressureBC::PressureNonEquilibriumCompressible:
-            return PressureNonEquilibriumCompressible;
+            return (boundaryConditionDirectional)PressureNonEquilibriumCompressible;
             break;
         case PressureBC::OutflowNonReflective:
-            return OutflowNonReflecting;
+            return (boundaryConditionDirectional)OutflowNonReflecting;
             break;
         case PressureBC::OutflowNonReflectivePressureCorrection:
-            return OutflowNonReflectingPressureCorrection;
+            return (boundaryConditionDirectional)OutflowNonReflectingPressureCorrection;
         default:
-            return nullptr;
+            return (boundaryCondition) nullptr;
     }
+}
+
+bool BoundaryConditionFactory::hasDirectionalPressureBoundaryCondition() const
+{
+    return std::holds_alternative<boundaryConditionDirectional>(getPressureBoundaryConditionPre());
 }
 
 precursorBoundaryConditionFunc BoundaryConditionFactory::getPrecursorBoundaryConditionPost() const

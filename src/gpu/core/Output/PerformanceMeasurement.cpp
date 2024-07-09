@@ -37,34 +37,49 @@
 
 #include "Parameter/Parameter.h"
 
-void PerformanceMeasurement::print(vf::basics::Timer& timer, uint timestep, Parameter* para,
-                                   vf::parallel::Communicator& communicator)
+PerformanceMeasurement::PerformanceMeasurement(const Parameter& para) : timestepStart(para.getTimestepStart())
+{
+    for (int level = para.getCoarse(); level <= para.getFine(); level++) {
+        totalNumberOfNodesCorrected += para.getParH(level)->numberOfNodes * pow(2., level);
+        totalNumberOfNodes += para.getParH(level)->numberOfNodes;
+    }
+}
+
+double PerformanceMeasurement::getNups() const
+{
+    return nups;
+}
+
+double PerformanceMeasurement::totalRuntimeInSeconds() const
+{
+    return totalTime;
+}
+
+void PerformanceMeasurement::log(vf::basics::Timer& timer, uint timestep, vf::parallel::Communicator& communicator)
 {
     totalTime += timer.getTimeInSeconds();
-    real fnups = 0.0;
-    real bandwidth = 0.0;
+    const uint numberOfTimeSteps = timestep - timestepStart;
 
-    for (int lev = para->getCoarse(); lev <= para->getFine(); lev++) {
-        fnups +=
-            (timestep - para->getTimestepStart()) * para->getParH(lev)->numberOfNodes * pow(2., lev) / (totalTime * 1.0E6);
-        bandwidth += (27.0 + 1.0) * 4.0 * (timestep - para->getTimestepStart()) * para->getParH(lev)->numberOfNodes /
-                     (totalTime * 10e9);
-    }
+    nups = numberOfTimeSteps * totalNumberOfNodesCorrected / totalTime;
+    const real bandwidth = (27.0 + 1.0) * 4.0 * numberOfTimeSteps * totalNumberOfNodes / (totalTime * 1.0E9);
 
-    if (this->firstOutput && communicator.getProcessID() == 0) // only display the legend once
+    const double meganups = nups / 1.0E6;
+
+    if (this->firstOutput && communicator.isRoot()) // only display the legend once
     {
         VF_LOG_INFO("PID \t --- Average performance ---  Processing time (ms) \t Nups in Mio \t Bandwidth in GB/sec");
         this->firstOutput = false;
     }
 
     VF_LOG_INFO(" {} \t --- Average performance --- {:>8.1f}/ {:<8.1f} \t   {:5.1f} \t       {:4.1f}",
-                communicator.getProcessID(), timer.getTimeInSeconds() * 1000, totalTime * 1000, fnups, bandwidth);
+                communicator.getProcessID(), timer.getTimeInSeconds() * 1000, totalTime * 1000, meganups, bandwidth);
 
     // When using multiple GPUs, sum the nups of all processes
     if (communicator.getNumberOfProcesses() > 1) {
-        double nupsSum = communicator.reduceSum(fnups);
-        if (communicator.getProcessID() == 0)
+        const double nupsSum = communicator.reduceSum(nups);
+        if (communicator.isRoot())
             VF_LOG_INFO("Sum of all {} processes: Nups in Mio: {:.1f}", communicator.getNumberOfProcesses(), nupsSum);
     }
 }
+
 //! \}

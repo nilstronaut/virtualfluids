@@ -36,16 +36,17 @@
 
 #include "../GridProvider.h"
 
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "Calculation/Calculation.h"
-
 
 class Parameter;
 class GridBuilder;
 class IndexRearrangementForStreams;
 class InterpolationCellGrouper;
+class BoundaryConditionFactory;
+
 namespace vf::parallel
 {
 class Communicator;
@@ -76,7 +77,7 @@ public:
     //! \brief allocates and initialized the data structures for Coordinates and node types
     void allocArrays_CoordNeighborGeo() override;
     //! \brief allocates and initialized the values at the boundary conditions
-    void allocArrays_BoundaryValues() override;
+    void allocArrays_BoundaryValues(const BoundaryConditionFactory* bcFactory) override;
     //! \brief allocates and initialized the sub-grid distances at the boundary conditions
     void allocArrays_BoundaryQs() override;
     void allocArrays_OffsetScale() override;
@@ -89,7 +90,8 @@ public:
     virtual void setBoundingBox() override;
 
     virtual void initPeriodicNeigh(std::vector<std::vector<std::vector<unsigned int> > > periodV, std::vector<std::vector<unsigned int> > periodIndex, std::string way) override;
-    
+    void initalGridInformations() override;
+
 private:
     void setPressureValues(int channelSide) const;
     void setPressRhoBC(int sizePerLevel, int level, int channelSide) const;
@@ -115,11 +117,18 @@ private:
     bool hasQs(int channelSide, unsigned int level) const;
 
     void initalValuesDomainDecompostion();
-public:
-    void initalGridInformations() override;
 
+    //! \brief initialize node indices, indices of neighbor nodes and pressure values for the pressure boundary condition
+    void initPressureBoundaryCondition();
+    //! \brief initialize direction, node indices, indices of neighbor nodes and pressure values for the pressure boundary
+    //! conditions that need a direction to work
+    void initDirectionalPressureBoundaryConditions();
 
-private:
+    //! \brief intialize the subgrid distances (Q's) for the pressure boundary condition
+    void initSubgridDistancesOfPressureBoundaryCondition(uint level);
+    //! \brief initialize the subgrid distances (Q's) for the pressure boundary conditions that need a direction to work
+    void initSubgridDistancesOfDirectionalPressureBoundaryCondition(uint level);
+
     //! \brief verifies if there are invalid nodes, stopper nodes or wrong neighbors
     std::string verifyNeighborIndices(int level) const;
     //! \brief verifies single neighbor index
@@ -127,7 +136,7 @@ private:
     //! \param invalidNodes reference to invalid nodes
     //! \param stopperNodes reference to stopper nodes
     //! \param wrongNeighbors reference to wrong neighbors
-    std::string verifyNeighborIndex(int level, int index , int &invalidNodes, int &stopperNodes, int &wrongNeighbors) const;
+    std::string verifyNeighborIndex(int level, int index, int &invalidNodes, int &stopperNodes, int &wrongNeighbors) const;
     //! \brief check the neighbors
     //! \param x,y,z lattice node position
     //! \param numberOfWrongNeighbors reference to the number of wrong neighbors
@@ -136,10 +145,15 @@ private:
     //! \param direction type string
     std::string checkNeighbor(int level, real x, real y, real z, int index, int& numberOfWrongNeihgbors, int neighborIndex, real neighborX, real neighborY, real neighborZ, std::string direction) const;
     //! \brief create the pointers in the struct for the BoundaryConditions from the boundary condition array
-    //! \param boundaryConditionStruct is a struct containing information about the boundary condition
-    //! \param subgridDistances is a pointer to an array containing the subgrid distances
+    //! \param subgridDistancesInDirections is an array pointers to the arrays of the subgrid distances in all directions
+    //! \param subgridDistances is a pointer to an array containing all subgrid distances
     //! \param numberOfBCnodes is the number of lattice nodes in the boundary condition
-    static void getPointersToBoundaryConditions(QforBoundaryConditions& boundaryConditionStruct, real* subgridDistances, const unsigned int numberOfBCnodes);
+
+    static void getPointersToBoundaryConditions(real** subgridDistancesInDirections, real* subgridDistances, const unsigned int numberOfBCnodes);
+    //! \brief init the pointers to the subgrid distances in all 27 directions from the pointer to the first one
+    static void initPointersToSubgridDistances(QforBoundaryConditions& boundaryCondition);
+    //! \brief init the pointers to the subgrid distances in all 27 directions from the pointer to the first one
+    static void initPointersToSubgridDistances(QforDirectionalBoundaryCondition& boundaryCondition);
 
 private:
     friend class GridGeneratorTests_initalValuesDomainDecompostion;

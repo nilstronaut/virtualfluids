@@ -139,6 +139,13 @@ public:
     void getPressureValues(real* rho, int* indices, int* neighborIndices, int level) const override;
     virtual void getPressureQs(real* qs[27], int level) const override;
 
+    size_t getNumberOfPressureBoundaryConditions(uint level) const override;
+    size_t getSizeOfPressureBoundaryCondition(uint level, uint indexInBoundaryConditionVector) const override;
+    void getPressureValues(real* density, int* indices, int* neighborIndices, uint level,
+                           uint indexInBoundaryConditionVector) const override;
+    void getPressureQs(real* qs[27], uint level, uint indexInBoundaryConditionVector) const override;
+    size_t getPressureBoundaryConditionDirection(uint level, uint indexInBoundaryConditionVector) const override;
+
     uint getPrecursorSize(int level) const override;
     void getPrecursorValues(   uint* neighbor0PP, uint* neighbor0PM, uint* neighbor0MP, uint* neighbor0MM,
                                                     real* weights0PP, real* weights0PM, real* weights0MP, real* weights0MM,

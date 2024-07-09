@@ -31,6 +31,7 @@
 //! \{
 //! \author Martin Schoenherr
 //=======================================================================================
+#include "tests/testUtilities.h"
 #include <gmock/gmock.h>
 
 #include <gpu/core/Restart/RestartObject.h>
@@ -52,6 +53,7 @@ void saveAndLoad()
     read_object->deserialize_internal(name);
 
     EXPECT_THAT(write_object->fs, ::testing::ContainerEq(read_object->fs));
+    write_object->delete_restart_file(name);
 }
 
 TEST(RestartObjectTests, saveAndLoad_ascii)
@@ -62,6 +64,25 @@ TEST(RestartObjectTests, saveAndLoad_ascii)
 TEST(RestartObjectTests, saveAndLoad_binary)
 {
     saveAndLoad<BinaryRestartObject>();
+}
+
+template <typename Type>
+void failToDeleteRestartFile()
+{
+    std::shared_ptr<RestartObject> write_object = std::make_shared<Type>();
+    testingVF::captureStdOut();
+    write_object->delete_restart_file("does_not_exist");
+    EXPECT_TRUE(testingVF::stdoutContainsWarning());
+}
+
+TEST(RestartObjectTests, noAsciiRestartFile_tryDeleteRestartFile_displaysWarning)
+{
+    failToDeleteRestartFile<ASCIIRestartObject>();
+}
+
+TEST(RestartObjectTests, noBinaryRestartFile_tryDeleteRestartFile_displaysWarning)
+{
+    failToDeleteRestartFile<BinaryRestartObject>();
 }
 
 //! \}

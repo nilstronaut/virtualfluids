@@ -56,6 +56,11 @@ std::array<real, 3> Side::getNormal() const
     return normal;
 }
 
+size_t Side::getD3Q27Direction() const
+{
+    return sideToD3Q27.at(whoAmI());
+}
+
 void Side::addIndices(SPtr<Grid> grid, SPtr<BoundaryCondition> boundaryCondition, std::string coord, real constant,
                       real startInner, real endInner, real startOuter, real endOuter)
 {

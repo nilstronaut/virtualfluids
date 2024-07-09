@@ -52,11 +52,12 @@
 #include "Cuda/CudaStreamManager.h"
 #include "Parameter/Parameter.h"
 #include "utilities/communication.h"
+#include "BoundaryConditions/BoundaryConditionFactory.h"
 
 using namespace vf::lbm::dir;
 
 GridGenerator::GridGenerator(std::shared_ptr<GridBuilder> builder, std::shared_ptr<Parameter> para,
-                             std::shared_ptr<CudaMemoryManager> cudaMemoryManager, vf::parallel::Communicator &communicator)
+                             std::shared_ptr<CudaMemoryManager> cudaMemoryManager, vf::parallel::Communicator& communicator)
     : mpiProcessID(communicator.getProcessID()), builder(builder)
 {
     this->para = para;
@@ -236,26 +237,67 @@ void GridGenerator::sortFluidNodeTags() {
     VF_LOG_INFO("done.");
 }
 
-void GridGenerator::allocArrays_BoundaryValues()
+void GridGenerator::initPressureBoundaryCondition()
 {
-    VF_LOG_TRACE("-----alloc BoundaryValues------");
-
     for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
         const auto numberOfPressureValues = int(builder->getPressureSize(level));
         VF_LOG_INFO("size pressure level {}: {}", level, numberOfPressureValues);
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         para->getParH(level)->pressureBC.numberOfBCnodes = 0;
         para->getParD(level)->outflowPressureCorrectionFactor = para->getOutflowPressureCorrectionFactor();
-        if (numberOfPressureValues > 1)
-        {
+        if (numberOfPressureValues > 1) {
             para->getParH(level)->pressureBC.numberOfBCnodes = numberOfPressureValues;
             cudaMemoryManager->cudaAllocPress(level);
-            builder->getPressureValues(para->getParH(level)->pressureBC.RhoBC, para->getParH(level)->pressureBC.k, para->getParH(level)->pressureBC.kN, level);
+            builder->getPressureValues(para->getParH(level)->pressureBC.RhoBC, para->getParH(level)->pressureBC.k,
+                                       para->getParH(level)->pressureBC.kN, level);
             cudaMemoryManager->cudaCopyPress(level);
         }
         para->getParD(level)->pressureBC.numberOfBCnodes = para->getParH(level)->pressureBC.numberOfBCnodes;
     }
+}
+
+void GridGenerator::initDirectionalPressureBoundaryConditions()
+{
+    for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
+        const auto numberOfBoundaryConditions = builder->getNumberOfPressureBoundaryConditions(level);
+        VF_LOG_INFO("Number of pressure boundary conditions on level {}: {}", level, numberOfBoundaryConditions);
+
+        auto& parH = para->getParHostAsReference(level);
+        auto& parD = para->getParDeviceAsReference(level);
+
+        parH.pressureBCDirectional.resize(numberOfBoundaryConditions);
+        parD.pressureBCDirectional.resize(numberOfBoundaryConditions);
+
+        parD.outflowPressureCorrectionFactor = para->getOutflowPressureCorrectionFactor();
+
+        for (uint bcIndex = 0; bcIndex < numberOfBoundaryConditions; bcIndex++) {
+            QforDirectionalBoundaryCondition& bcHost = parH.pressureBCDirectional[bcIndex];
+            QforDirectionalBoundaryCondition& bcDevice = parD.pressureBCDirectional[bcIndex];
+
+            const auto numberOfPressureBoundaryNodes = builder->getSizeOfPressureBoundaryCondition(level, bcIndex);
+            VF_LOG_INFO("Size of pressure boundary condition {} on level {}: {}", bcIndex, level,
+                        static_cast<uint>(numberOfPressureBoundaryNodes));
+            bcHost.numberOfBCnodes = static_cast<uint>(numberOfPressureBoundaryNodes);
+            bcDevice.numberOfBCnodes = bcHost.numberOfBCnodes;
+
+            bcHost.direction = builder->getPressureBoundaryConditionDirection(level, bcIndex);
+            bcDevice.direction = bcHost.direction;
+
+            cudaMemoryManager->cudaAllocDirectionalBoundaryCondition(bcHost, bcDevice);
+            builder->getPressureValues(bcHost.RhoBC, bcHost.k, bcHost.kN, level, bcIndex);
+            cudaMemoryManager->cudaCopyDirectionalBoundaryCondition(bcHost, bcDevice);
+        }
+    }
+}
+
+void GridGenerator::allocArrays_BoundaryValues(const BoundaryConditionFactory* bcFactory)
+{
+    VF_LOG_TRACE("-----alloc BoundaryValues------");
+
+    if (bcFactory->hasDirectionalPressureBoundaryCondition())
+        initDirectionalPressureBoundaryConditions();
+    else
+        initPressureBoundaryCondition();
 
     for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
         const auto numberOfSlipValues = int(builder->getSlipSize(level));
@@ -726,28 +768,45 @@ void GridGenerator::initalValuesDomainDecompostion()
     }
 }
 
+void GridGenerator::initSubgridDistancesOfPressureBoundaryCondition(uint level)
+{
+    VF_LOG_INFO("size Pressure: {}: {}", level, builder->getPressureSize(level));
+    QforBoundaryConditions& Q = para->getParH(level)->pressureBC;
+    initPointersToSubgridDistances(Q);
+    builder->getPressureQs(Q.q27, level);
+    cudaMemoryManager->cudaCopyPress(level);
+}
+
+void GridGenerator::initSubgridDistancesOfDirectionalPressureBoundaryCondition(uint level)
+{
+    for (size_t indexInBoundaryConditionVector = 0;
+         indexInBoundaryConditionVector < para->getParH(level)->pressureBCDirectional.size();
+         indexInBoundaryConditionVector++) {
+        QforDirectionalBoundaryCondition& pressureBCHost =
+            para->getParH(level)->pressureBCDirectional[indexInBoundaryConditionVector];
+        QforDirectionalBoundaryCondition& pressureBCDevice =
+            para->getParD(level)->pressureBCDirectional[indexInBoundaryConditionVector];
+
+        VF_LOG_INFO("Size of pressure boundary condition {} on level {}: {}", indexInBoundaryConditionVector, level,
+                    static_cast<uint>(pressureBCHost.numberOfBCnodes));
+
+        initPointersToSubgridDistances(pressureBCHost);
+        builder->getPressureQs(pressureBCHost.q27, level, static_cast<uint>(indexInBoundaryConditionVector));
+        cudaMemoryManager->cudaCopyDirectionalBoundaryCondition(pressureBCHost, pressureBCDevice);
+    }
+}
+
 void GridGenerator::allocArrays_BoundaryQs()
 {
     VF_LOG_TRACE("allocArrays_BoundaryQs()");
 
-
-    for (uint i = 0; i < builder->getNumberOfGridLevels(); i++) {
-        const auto numberOfPressureValues = (int)builder->getPressureSize(i);
-        if (numberOfPressureValues > 0)
-        {
-            VF_LOG_INFO("size Pressure: {}: {}", i, numberOfPressureValues);
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            //preprocessing
-            real* QQ = para->getParH(i)->pressureBC.q27[0];
-            unsigned int sizeQ = para->getParH(i)->pressureBC.numberOfBCnodes;
-            QforBoundaryConditions &Q = para->getParH(i)->pressureBC;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
-
-            builder->getPressureQs(Q.q27, i);
-
-            cudaMemoryManager->cudaCopyPress(i);
-        }//ende if
-    }//ende oberste for schleife
+    for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
+        auto& parH = para->getParHostAsReference(level);
+        if (parH.pressureBCDirectional.size() > 0)
+            initDirectionalPressureBoundaryConditions();
+        else if (builder->getPressureSize(level) > 0)
+            initPressureBoundaryCondition();
+    }
 
     for (uint i = 0; i < builder->getNumberOfGridLevels(); i++) {
         int numberOfSlipValues = (int)builder->getSlipSize(i);
@@ -756,10 +815,8 @@ void GridGenerator::allocArrays_BoundaryQs()
             VF_LOG_INFO("size Slip:  {}: {}", i, numberOfSlipValues);
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //preprocessing
-            real* QQ = para->getParH(i)->slipBC.q27[0];
-            unsigned int sizeQ = para->getParH(i)->slipBC.numberOfBCnodes;
             QforBoundaryConditions &Q = para->getParH(i)->slipBC;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
+            initPointersToSubgridDistances(Q);
 
             builder->getSlipQs(Q.q27, i);
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -775,10 +832,8 @@ void GridGenerator::allocArrays_BoundaryQs()
             VF_LOG_INFO("size Stress:  {}: {}", i, numberOfStressValues);
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //preprocessing
-            real* QQ = para->getParH(i)->stressBC.q27[0];
-            unsigned int sizeQ = para->getParH(i)->stressBC.numberOfBCnodes;
             QforBoundaryConditions &Q = para->getParH(i)->stressBC;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
+            initPointersToSubgridDistances(Q);
             
             builder->getStressQs(Q.q27, i);
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -794,10 +849,8 @@ void GridGenerator::allocArrays_BoundaryQs()
             VF_LOG_INFO("size velocity level {}: {}", i, numberOfVelocityNodes);
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //preprocessing
-            real* QQ = para->getParH(i)->velocityBC.q27[0];
-            unsigned int sizeQ = para->getParH(i)->velocityBC.numberOfBCnodes;
             QforBoundaryConditions &Q = para->getParH(i)->velocityBC;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
+            initPointersToSubgridDistances(Q);
             builder->getVelocityQs(Q.q27, i);
 
             if (para->getDiffOn()) {
@@ -832,7 +885,7 @@ void GridGenerator::allocArrays_BoundaryQs()
             real* QQ = para->getParH(i)->precursorBC.q27[0];
             unsigned int sizeQ = para->getParH(i)->precursorBC.numberOfBCnodes;
             QforBoundaryConditions Q;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
+            getPointersToBoundaryConditions(Q.q27, QQ, sizeQ);
 
             builder->getPrecursorQs(Q.q27, i);
 
@@ -888,10 +941,8 @@ void GridGenerator::allocArrays_BoundaryQs()
             builder->getGeometryIndices(para->getParH(i)->geometryBC.k, i);
             //////////////////////////////////////////////////////////////////////////
             //preprocessing
-            real* QQ = para->getParH(i)->geometryBC.q27[0];
-            unsigned int sizeQ = para->getParH(i)->geometryBC.numberOfBCnodes;
             QforBoundaryConditions &Q = para->getParH(i)->geometryBC;
-            getPointersToBoundaryConditions(Q, QQ, sizeQ);
+            initPointersToSubgridDistances(Q);
             //////////////////////////////////////////////////////////////////
 
             builder->getGeometryQs(Q.q27, i);
@@ -1118,34 +1169,45 @@ std::string GridGenerator::checkNeighbor(int level, real x, real y, real z, int 
     return oss.str();
 }
 
-void GridGenerator::getPointersToBoundaryConditions(QforBoundaryConditions& boundaryConditionStruct, real* subgridDistances, const unsigned int numberOfBCnodes){
-    boundaryConditionStruct.q27[dP00] = &subgridDistances[dP00 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dM00] = &subgridDistances[dM00 * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0P0] = &subgridDistances[d0P0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0M0] = &subgridDistances[d0M0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[d00P] = &subgridDistances[d00P * numberOfBCnodes];
-    boundaryConditionStruct.q27[d00M] = &subgridDistances[d00M * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPP0] = &subgridDistances[dPP0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMM0] = &subgridDistances[dMM0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPM0] = &subgridDistances[dPM0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMP0] = &subgridDistances[dMP0 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dP0P] = &subgridDistances[dP0P * numberOfBCnodes];
-    boundaryConditionStruct.q27[dM0M] = &subgridDistances[dM0M * numberOfBCnodes];
-    boundaryConditionStruct.q27[dP0M] = &subgridDistances[dP0M * numberOfBCnodes];
-    boundaryConditionStruct.q27[dM0P] = &subgridDistances[dM0P * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0PP] = &subgridDistances[d0PP * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0MM] = &subgridDistances[d0MM * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0PM] = &subgridDistances[d0PM * numberOfBCnodes];
-    boundaryConditionStruct.q27[d0MP] = &subgridDistances[d0MP * numberOfBCnodes];
-    boundaryConditionStruct.q27[d000] = &subgridDistances[d000 * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPPP] = &subgridDistances[dPPP * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMMP] = &subgridDistances[dMMP * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPMP] = &subgridDistances[dPMP * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMPP] = &subgridDistances[dMPP * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPPM] = &subgridDistances[dPPM * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMMM] = &subgridDistances[dMMM * numberOfBCnodes];
-    boundaryConditionStruct.q27[dPMM] = &subgridDistances[dPMM * numberOfBCnodes];
-    boundaryConditionStruct.q27[dMPM] = &subgridDistances[dMPM * numberOfBCnodes];
+void GridGenerator::getPointersToBoundaryConditions(real** subgridDistancesInDirections, real* subgridDistances, const unsigned int numberOfBCnodes){
+    subgridDistancesInDirections[dP00] = &subgridDistances[dP00 * numberOfBCnodes];
+    subgridDistancesInDirections[dM00] = &subgridDistances[dM00 * numberOfBCnodes];
+    subgridDistancesInDirections[d0P0] = &subgridDistances[d0P0 * numberOfBCnodes];
+    subgridDistancesInDirections[d0M0] = &subgridDistances[d0M0 * numberOfBCnodes];
+    subgridDistancesInDirections[d00P] = &subgridDistances[d00P * numberOfBCnodes];
+    subgridDistancesInDirections[d00M] = &subgridDistances[d00M * numberOfBCnodes];
+    subgridDistancesInDirections[dPP0] = &subgridDistances[dPP0 * numberOfBCnodes];
+    subgridDistancesInDirections[dMM0] = &subgridDistances[dMM0 * numberOfBCnodes];
+    subgridDistancesInDirections[dPM0] = &subgridDistances[dPM0 * numberOfBCnodes];
+    subgridDistancesInDirections[dMP0] = &subgridDistances[dMP0 * numberOfBCnodes];
+    subgridDistancesInDirections[dP0P] = &subgridDistances[dP0P * numberOfBCnodes];
+    subgridDistancesInDirections[dM0M] = &subgridDistances[dM0M * numberOfBCnodes];
+    subgridDistancesInDirections[dP0M] = &subgridDistances[dP0M * numberOfBCnodes];
+    subgridDistancesInDirections[dM0P] = &subgridDistances[dM0P * numberOfBCnodes];
+    subgridDistancesInDirections[d0PP] = &subgridDistances[d0PP * numberOfBCnodes];
+    subgridDistancesInDirections[d0MM] = &subgridDistances[d0MM * numberOfBCnodes];
+    subgridDistancesInDirections[d0PM] = &subgridDistances[d0PM * numberOfBCnodes];
+    subgridDistancesInDirections[d0MP] = &subgridDistances[d0MP * numberOfBCnodes];
+    subgridDistancesInDirections[d000] = &subgridDistances[d000 * numberOfBCnodes];
+    subgridDistancesInDirections[dPPP] = &subgridDistances[dPPP * numberOfBCnodes];
+    subgridDistancesInDirections[dMMP] = &subgridDistances[dMMP * numberOfBCnodes];
+    subgridDistancesInDirections[dPMP] = &subgridDistances[dPMP * numberOfBCnodes];
+    subgridDistancesInDirections[dMPP] = &subgridDistances[dMPP * numberOfBCnodes];
+    subgridDistancesInDirections[dPPM] = &subgridDistances[dPPM * numberOfBCnodes];
+    subgridDistancesInDirections[dMMM] = &subgridDistances[dMMM * numberOfBCnodes];
+    subgridDistancesInDirections[dPMM] = &subgridDistances[dPMM * numberOfBCnodes];
+    subgridDistancesInDirections[dMPM] = &subgridDistances[dMPM * numberOfBCnodes];
 }
 
+void GridGenerator::initPointersToSubgridDistances(QforBoundaryConditions& boundaryCondition)
+{
+    GridGenerator::getPointersToBoundaryConditions(boundaryCondition.q27, boundaryCondition.q27[0],
+                                                   boundaryCondition.numberOfBCnodes);
+}
+
+void GridGenerator::initPointersToSubgridDistances(QforDirectionalBoundaryCondition& boundaryCondition)
+{
+    GridGenerator::getPointersToBoundaryConditions(boundaryCondition.q27, boundaryCondition.q27[0],
+                                                   boundaryCondition.numberOfBCnodes);
+}
 //! \}

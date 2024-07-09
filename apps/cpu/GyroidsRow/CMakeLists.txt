@@ -32,4 +32,4 @@
 #=======================================================================================
 PROJECT(GyroidsRow)
 
-vf_add_executable(PRIVATE_LINK cpu_core muparser basics ${MPI_CXX_LIBRARIES} FILES GyroidsRow.cpp)
+vf_add_executable(PRIVATE_LINK cpu_core)

@@ -917,4 +917,39 @@ TEST_F(SideTestBC, setQs3D_givenPYandMXhaveBeenSet_thenSetPZ_doNotSetSameQsAgain
     EXPECT_THAT(actualQs, testing::Eq(expectedQsForTwoPreviousBCs));
 }
 
+TEST(SideTest, getD3Q27Direction_MX)
+{
+    auto mx = MX();
+    EXPECT_THAT(mx.getD3Q27Direction(), testing::Eq(vf::lbm::dir::dM00));
+}
+
+TEST(SideTest, getD3Q27Direction_PX)
+{
+    auto px = PX();
+    EXPECT_THAT(px.getD3Q27Direction(), testing::Eq(vf::lbm::dir::dP00));
+}
+
+TEST(SideTest, getD3Q27Direction_MY)
+{
+    auto my = MY();
+    EXPECT_THAT(my.getD3Q27Direction(), testing::Eq(vf::lbm::dir::d0M0));
+}
+
+TEST(SideTest, getD3Q27Direction_PY)
+{
+    auto py = PY();
+    EXPECT_THAT(py.getD3Q27Direction(), testing::Eq(vf::lbm::dir::d0P0));
+}
+
+TEST(SideTest, getD3Q27Direction_MZ)
+{
+    auto mz = MZ();
+    EXPECT_THAT(mz.getD3Q27Direction(), testing::Eq(vf::lbm::dir::d00M));
+}
+
+TEST(SideTest, getD3Q27Direction_PZ)
+{
+    auto pz = PZ();
+    EXPECT_THAT(pz.getD3Q27Direction(), testing::Eq(vf::lbm::dir::d00P));
+}
 //! \}

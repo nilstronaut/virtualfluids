@@ -237,7 +237,7 @@ public:
     void allocArrays_CoordNeighborGeo() override{};
     void setBoundingBox() override{};
     void allocArrays_OffsetScale() override{};
-    void allocArrays_BoundaryValues() override{};
+    void allocArrays_BoundaryValues(const BoundaryConditionFactory* bcFactory) override{};
     void allocArrays_BoundaryQs() override{};
 };
 

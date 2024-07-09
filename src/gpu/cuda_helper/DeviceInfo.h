@@ -33,10 +33,16 @@
 #ifndef CUDA_DEVICEINFO_H
 #define CUDA_DEVICEINFO_H
 
+#include <string>
+
 namespace vf::cuda
 {
 
 void verifyAndSetDevice(int deviceId);
+
+std::string getGPUName(int deviceId);
+
+std::string getComputeCapability(int deviceId);
 
 void printCudaInformation(int deviceId);
 

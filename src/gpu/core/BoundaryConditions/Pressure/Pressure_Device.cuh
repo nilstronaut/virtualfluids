@@ -41,11 +41,10 @@
 
 __global__ void PressureNonEquilibriumIncompressible_Device( 
     real* rhoBC,
-    real* DD,
-    int* k_Q,
-    int* k_N,
+    real* distribution,
+    int* bcNodeIndices,
+    int* bcNeighborIndices,
     int numberOfBCnodes,
-    real om1,
     unsigned int* neighborX,
     unsigned int* neighborY,
     unsigned int* neighborZ,
@@ -59,7 +58,6 @@ __global__ void PressureNonEquilibriumCompressible_Device(
     int* bcNodeIndices,
     int* bcNeighborIndices,
     int numberOfBCnodes,
-    real omega1,
     unsigned int* neighborX,
     unsigned int* neighborY,
     unsigned int* neighborZ,

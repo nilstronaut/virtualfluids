@@ -94,9 +94,33 @@ void verifyAndSetDevice(int deviceId)
     setCudaDevice(deviceId);
 }
 
+std::string getGPUName(int deviceId)
+{
+    cudaDeviceProp prop;
+    cudaError_t errorId = cudaGetDeviceProperties(&prop, deviceId);
 
+    if (errorId != cudaSuccess) {
+        VF_LOG_CRITICAL("Device {}: Error while accessing the device properties occurs: {}", deviceId,
+                        cudaGetErrorString(errorId));
+    }
 
-void printCudaInformation(int deviceId) 
+    return { prop.name };
+}
+
+std::string getComputeCapability(int deviceId)
+{
+    cudaDeviceProp prop;
+    cudaError_t errorId = cudaGetDeviceProperties(&prop, deviceId);
+
+    if (errorId != cudaSuccess) {
+        VF_LOG_CRITICAL("Device {}: Error while accessing the device properties occurs: {}", deviceId,
+                        cudaGetErrorString(errorId));
+    }
+
+    return { "" + std::to_string(prop.major) + "." + std::to_string(prop.minor) };
+}
+
+void printCudaInformation(int deviceId)
 {
     cudaDeviceProp prop;
     cudaError_t errorId = cudaGetDeviceProperties(&prop, deviceId);

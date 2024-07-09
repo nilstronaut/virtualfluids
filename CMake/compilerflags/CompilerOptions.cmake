@@ -111,12 +111,35 @@ function(set_project_options project_name)
         endif()
     ENDIF()
 
+    # precision
     if(VF_ENABLE_DOUBLE_ACCURACY)
         target_compile_definitions(${project_name} INTERFACE VF_DOUBLE_ACCURACY)
         message(STATUS "Configure VirtualFluids with double precision")
     else()
         message(STATUS "Configure VirtualFluids with single precision")
     endif()
+
+
+    # rangecheck
+    if(VF_NO_RANGECHECK)
+        target_compile_definitions(${project_name} INTERFACE VF_NO_RANGECHECK)
+        message(STATUS "Rangecheck will NOT be enabled in Debug and Release Build.")
+    else()
+        if(VF_RANGECHECK) 
+            target_compile_definitions(${project_name} INTERFACE VF_RANGECHECK)
+            message(STATUS "Rangecheck will be enabled in Debug and Release Builds.")
+        else()
+            message(STATUS "Rangecheck will be enabled in Debug Builds.")
+        endif()
+    endif()
+
+    # debug / release
+    if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+        target_compile_definitions(${project_name} INTERFACE VF_DEBUG)
+    else()
+        target_compile_definitions(${project_name} INTERFACE VF_RELEASE)
+    endif()
+    
 
 
 endfunction()

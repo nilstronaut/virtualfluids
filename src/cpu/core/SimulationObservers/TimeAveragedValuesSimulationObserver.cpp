@@ -276,7 +276,7 @@ void TimeAveragedValuesSimulationObserver::addData(const SPtr<Block3D> block)
 
     data.resize(datanames.size());
 
-    SPtr<ILBMKernel> kernel                 = block->getKernel();
+    SPtr<LBMKernel> kernel                 = block->getKernel();
     SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
     SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
     SPtr<AverageValuesArray3D> ar           = kernel->getDataSet()->getAverageDensity();
@@ -399,7 +399,7 @@ void TimeAveragedValuesSimulationObserver::calculateAverageValues(real timeSteps
         for (i = 0; i < block_size; i++) {
             SPtr<Block3D> block = blockVector[level][i];
             if (block) {
-                SPtr<ILBMKernel> kernel                 = block->getKernel();
+                SPtr<LBMKernel> kernel                 = block->getKernel();
                 SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                 SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                 SPtr<AverageValuesArray3D> ar           = kernel->getDataSet()->getAverageDensity();
@@ -521,7 +521,7 @@ void TimeAveragedValuesSimulationObserver::calculateSubtotal(real step)
                 for (i = 0; i < block_size; i++) {
                     SPtr<Block3D> block = blockVector[level][i];
                     if (block) {
-                        SPtr<ILBMKernel> kernel                 = block->getKernel();
+                        SPtr<LBMKernel> kernel                 = block->getKernel();
                         SPtr<BCArray3D> bcArray                 = kernel->getBCSet()->getBCArray();
                         SPtr<DistributionArray3D> distributions = kernel->getDataSet()->getFdistributions();
                         SPtr<AverageValuesArray3D> ar           = kernel->getDataSet()->getAverageDensity();
@@ -828,7 +828,7 @@ void TimeAveragedValuesSimulationObserver::calculateAverageValuesForPlane(
     real lsaRhoF = 0;
 
     for (IntegrateValuesHelper::CalcNodes cn : cnodes) {
-        SPtr<ILBMKernel> kernel                               = cn.block->getKernel();
+        SPtr<LBMKernel> kernel                               = cn.block->getKernel();
         SPtr<AverageValuesArray3D> averagedDensity            = kernel->getDataSet()->getAverageDensity();
         SPtr<AverageValuesArray3D> averagedVelocity           = kernel->getDataSet()->getAverageVelocity();
         SPtr<AverageValuesArray3D> averagedFluctuations       = kernel->getDataSet()->getAverageFluctuations();

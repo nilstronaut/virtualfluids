@@ -115,6 +115,13 @@ public:
     virtual void getPressureValues(real *rho, int *indices, int *neighborIndices, int level) const = 0;
     virtual void getPressureQs(real *qs[27], int level) const                                      = 0;
 
+    virtual size_t getNumberOfPressureBoundaryConditions(uint level) const = 0;
+    virtual size_t getSizeOfPressureBoundaryCondition(uint level, uint indexInBoundaryConditionVector) const = 0;
+    virtual void getPressureValues(real* density, int* indices, int* neighborIndices, uint level,
+                                   uint indexInBoundaryConditionVector) const = 0;
+    virtual void getPressureQs(real* qs[27], uint level, uint indexInBoundaryConditionVector) const = 0;
+    virtual size_t getPressureBoundaryConditionDirection(uint level, uint indexInBoundaryConditionVector) const = 0;
+
     virtual uint getPrecursorSize(int level) const              = 0;
     virtual void getPrecursorValues(uint* neighbor0PP, uint* neighbor0PM, uint* neighbor0MP, uint* neighbor0MM, 
                                     real* weights0PP, real* weights0PM, real* weights0MP, real* weights0MM, 

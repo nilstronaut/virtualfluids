@@ -149,7 +149,7 @@ void WriteBoundaryConditionsSimulationObserver::addDataGeo(SPtr<Block3D> block)
 
     data.resize(datanames.size());
 
-    SPtr<ILBMKernel> kernel = block->getKernel();
+    SPtr<LBMKernel> kernel = block->getKernel();
     SPtr<BCArray3D> bcArray = kernel->getBCSet()->getBCArray();
 
 

@@ -45,6 +45,7 @@
 
 #include "Parameter/Parameter.h"
 
+
 IndexRearrangementForStreams::IndexRearrangementForStreams(std::shared_ptr<Parameter> para,
                                                            std::shared_ptr<GridBuilder> builder,
                                                            vf::parallel::Communicator &communicator)

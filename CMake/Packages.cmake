@@ -37,7 +37,8 @@ message(STATUS "Fetching spdlog: ${spdlog_version}")
 FetchContent_Declare(
     spdlog
     GIT_REPOSITORY ${spdlog_url}
-    GIT_TAG ${spdlog_version})
+    GIT_TAG ${spdlog_version}
+    GIT_SHALLOW 1)
 
 FetchContent_MakeAvailable(spdlog)
 if(NOT MSVC)
@@ -78,6 +79,7 @@ endif()
 
 if(VF_ENABLE_OPENMP)
     find_package(OpenMP REQUIRED)
+    target_compile_definitions(project_options INTERFACE VF_OPENMP)
 endif()
 
 # TODO: https://git.rz.tu-bs.de/irmb/VirtualFluids_dev/-/issues/139 if(VF_ENABLE_MPI)
@@ -104,7 +106,26 @@ if(VF_ENABLE_PYTHON_BINDINGS)
     FetchContent_Declare(
         pybind11
         GIT_REPOSITORY ${pybind_url}
-        GIT_TAG ${pybind_version})
+        GIT_TAG ${pybind_version}
+        GIT_SHALLOW 1)
 
     FetchContent_MakeAvailable(pybind11)
 endif()
+
+# YAML
+set(yaml_git_version "0.8.0")
+set(yaml_url "https://github.com/jbeder/yaml-cpp")
+message(STATUS "Fetching yaml-cpp: ${yaml_git_version}")
+FetchContent_Declare(yaml-cpp
+  GIT_REPOSITORY ${yaml_url}
+  GIT_TAG ${yaml_git_version}
+  GIT_SHALLOW 1) 
+FetchContent_GetProperties(yaml-cpp)
+if(NOT yaml-cpp_POPULATED)
+  FetchContent_Populate(yaml-cpp)
+  add_subdirectory(${yaml-cpp_SOURCE_DIR} ${yaml-cpp_BINARY_DIR})
+endif()
+
+# Metis
+add_subdirectory(${VF_THIRD_DIR}/metis/metis-5.1.0)
+target_compile_definitions(project_options INTERFACE VF_METIS)

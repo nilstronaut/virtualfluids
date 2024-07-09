@@ -36,19 +36,18 @@
 #include "basics/constants/NumericConstants.h"
 #include "lbm/MacroscopicQuantities.h"
 #include "Utilities/KernelUtilities.h"
+#include "cuda_helper/CudaIndexCalculation.h"
 
 using namespace vf::basics::constant;
 using namespace vf::lbm::dir;
 using namespace vf::gpu;
 
-
 __global__ void PressureNonEquilibriumIncompressible_Device(
     real* rhoBC,
-    real* DD,
-    int* k_Q,
-    int* k_N,
+    real* distributions,
+    int* bcNodeIndices,
+    int* bcNeighborIndices,
     int numberOfBCnodes,
-    real om1,
     unsigned int* neighborX,
     unsigned int* neighborY,
     unsigned int* neighborZ,
@@ -57,380 +56,256 @@ __global__ void PressureNonEquilibriumIncompressible_Device(
     size_t direction)
 {
    ////////////////////////////////////////////////////////////////////////////////
-   const unsigned  x = threadIdx.x;  // Globaler x-Index
-   const unsigned  y = blockIdx.x;   // Globaler y-Index
-   const unsigned  z = blockIdx.y;   // Globaler z-Index
+   //! The pressure boundary condition is executed in the following steps
+   //!
 
-   const unsigned nx = blockDim.x;
-   const unsigned ny = gridDim.x;
+   ////////////////////////////////////////////////////////////////////////////////
+   //! - Get node index coordinates from threadIdx, blockIdx, blockDim and gridDim.
+   //!
+   const unsigned nodeIndex = vf::cuda::get1DIndexFrom2DBlock();
 
-   const unsigned k = nx*(ny*z + y) + x;
-   //////////////////////////////////////////////////////////////////////////
-
-   if(k<numberOfBCnodes)
+   ////////////////////////////////////////////////////////////////////////////////
+   //! - Run for all indices in size of boundary condition (numberOfBCnodes)
+   //!
+   if(nodeIndex<numberOfBCnodes)
    {
-      ////////////////////////////////////////////////////////////////////////////////
-      //index
-      unsigned int KQK  = k_Q[k];
-      unsigned int kzero= KQK;
-      unsigned int ke   = KQK;
-      unsigned int kw   = neighborX[KQK];
-      unsigned int kn   = KQK;
-      unsigned int ks   = neighborY[KQK];
-      unsigned int kt   = KQK;
-      unsigned int kb   = neighborZ[KQK];
-      unsigned int ksw  = neighborY[kw];
-      unsigned int kne  = KQK;
-      unsigned int kse  = ks;
-      unsigned int knw  = kw;
-      unsigned int kbw  = neighborZ[kw];
-      unsigned int kte  = KQK;
-      unsigned int kbe  = kb;
-      unsigned int ktw  = kw;
-      unsigned int kbs  = neighborZ[ks];
-      unsigned int ktn  = KQK;
-      unsigned int kbn  = kb;
-      unsigned int kts  = ks;
-      unsigned int ktse = ks;
-      unsigned int kbnw = kbw;
-      unsigned int ktnw = kw;
-      unsigned int kbse = kbs;
-      unsigned int ktsw = ksw;
-      unsigned int kbne = kb;
-      unsigned int ktne = KQK;
-      unsigned int kbsw = neighborZ[ksw];
-      ////////////////////////////////////////////////////////////////////////////////
-      //index1
-      unsigned int K1QK  = k_N[k];
-      unsigned int k1zero= K1QK;
-      unsigned int k1e   = K1QK;
-      unsigned int k1w   = neighborX[K1QK];
-      unsigned int k1n   = K1QK;
-      unsigned int k1s   = neighborY[K1QK];
-      unsigned int k1t   = K1QK;
-      unsigned int k1b   = neighborZ[K1QK];
-      unsigned int k1sw  = neighborY[k1w];
-      unsigned int k1ne  = K1QK;
-      unsigned int k1se  = k1s;
-      unsigned int k1nw  = k1w;
-      unsigned int k1bw  = neighborZ[k1w];
-      unsigned int k1te  = K1QK;
-      unsigned int k1be  = k1b;
-      unsigned int k1tw  = k1w;
-      unsigned int k1bs  = neighborZ[k1s];
-      unsigned int k1tn  = K1QK;
-      unsigned int k1bn  = k1b;
-      unsigned int k1ts  = k1s;
-      unsigned int k1tse = k1s;
-      unsigned int k1bnw = k1bw;
-      unsigned int k1tnw = k1w;
-      unsigned int k1bse = k1bs;
-      unsigned int k1tsw = k1sw;
-      unsigned int k1bne = k1b;
-      unsigned int k1tne = K1QK;
-      unsigned int k1bsw = neighborZ[k1sw];
-      ////////////////////////////////////////////////////////////////////////////////
-      Distributions27 D;
-      if (isEvenTimestep==true) //// ACHTUNG PREColl !!!!!!!!!!!!!!
-      {
-         D.f[dP00] = &DD[dP00 * numberOfLBnodes];
-         D.f[dM00] = &DD[dM00 * numberOfLBnodes];
-         D.f[d0P0] = &DD[d0P0 * numberOfLBnodes];
-         D.f[d0M0] = &DD[d0M0 * numberOfLBnodes];
-         D.f[d00P] = &DD[d00P * numberOfLBnodes];
-         D.f[d00M] = &DD[d00M * numberOfLBnodes];
-         D.f[dPP0] = &DD[dPP0 * numberOfLBnodes];
-         D.f[dMM0] = &DD[dMM0 * numberOfLBnodes];
-         D.f[dPM0] = &DD[dPM0 * numberOfLBnodes];
-         D.f[dMP0] = &DD[dMP0 * numberOfLBnodes];
-         D.f[dP0P] = &DD[dP0P * numberOfLBnodes];
-         D.f[dM0M] = &DD[dM0M * numberOfLBnodes];
-         D.f[dP0M] = &DD[dP0M * numberOfLBnodes];
-         D.f[dM0P] = &DD[dM0P * numberOfLBnodes];
-         D.f[d0PP] = &DD[d0PP * numberOfLBnodes];
-         D.f[d0MM] = &DD[d0MM * numberOfLBnodes];
-         D.f[d0PM] = &DD[d0PM * numberOfLBnodes];
-         D.f[d0MP] = &DD[d0MP * numberOfLBnodes];
-         D.f[d000] = &DD[d000 * numberOfLBnodes];
-         D.f[dPPP] = &DD[dPPP * numberOfLBnodes];
-         D.f[dMMP] = &DD[dMMP * numberOfLBnodes];
-         D.f[dPMP] = &DD[dPMP * numberOfLBnodes];
-         D.f[dMPP] = &DD[dMPP * numberOfLBnodes];
-         D.f[dPPM] = &DD[dPPM * numberOfLBnodes];
-         D.f[dMMM] = &DD[dMMM * numberOfLBnodes];
-         D.f[dPMM] = &DD[dPMM * numberOfLBnodes];
-         D.f[dMPM] = &DD[dMPM * numberOfLBnodes];
-      }
-      else
-      {
-         D.f[dM00] = &DD[dP00 * numberOfLBnodes];
-         D.f[dP00] = &DD[dM00 * numberOfLBnodes];
-         D.f[d0M0] = &DD[d0P0 * numberOfLBnodes];
-         D.f[d0P0] = &DD[d0M0 * numberOfLBnodes];
-         D.f[d00M] = &DD[d00P * numberOfLBnodes];
-         D.f[d00P] = &DD[d00M * numberOfLBnodes];
-         D.f[dMM0] = &DD[dPP0 * numberOfLBnodes];
-         D.f[dPP0] = &DD[dMM0 * numberOfLBnodes];
-         D.f[dMP0] = &DD[dPM0 * numberOfLBnodes];
-         D.f[dPM0] = &DD[dMP0 * numberOfLBnodes];
-         D.f[dM0M] = &DD[dP0P * numberOfLBnodes];
-         D.f[dP0P] = &DD[dM0M * numberOfLBnodes];
-         D.f[dM0P] = &DD[dP0M * numberOfLBnodes];
-         D.f[dP0M] = &DD[dM0P * numberOfLBnodes];
-         D.f[d0MM] = &DD[d0PP * numberOfLBnodes];
-         D.f[d0PP] = &DD[d0MM * numberOfLBnodes];
-         D.f[d0MP] = &DD[d0PM * numberOfLBnodes];
-         D.f[d0PM] = &DD[d0MP * numberOfLBnodes];
-         D.f[d000] = &DD[d000 * numberOfLBnodes];
-         D.f[dPPP] = &DD[dMMM * numberOfLBnodes];
-         D.f[dMMP] = &DD[dPPM * numberOfLBnodes];
-         D.f[dPMP] = &DD[dMPM * numberOfLBnodes];
-         D.f[dMPP] = &DD[dPMM * numberOfLBnodes];
-         D.f[dPPM] = &DD[dMMP * numberOfLBnodes];
-         D.f[dMMM] = &DD[dPPP * numberOfLBnodes];
-         D.f[dPMM] = &DD[dMPP * numberOfLBnodes];
-         D.f[dMPM] = &DD[dPMP * numberOfLBnodes];
-      }
-      //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      real        f1_E,f1_W,f1_N,f1_S,f1_T,f1_B,f1_NE,f1_SW,f1_SE,f1_NW,f1_TE,f1_BW,f1_BE,f1_TW,f1_TN,f1_BS,f1_BN,f1_TS,f1_ZERO,
-                     f1_TNE,f1_TSW,f1_TSE,f1_TNW,f1_BNE,f1_BSW,f1_BSE,f1_BNW;
+       ////////////////////////////////////////////////////////////////////////////////
+      //! - Set neighbor indices (necessary for indirect addressing) for current node
+      //!
+      vf::gpu::ListIndices neighborIndices(bcNodeIndices[nodeIndex], neighborX, neighborY, neighborZ);
 
-      f1_W    = (D.f[dP00])[k1e   ];
-      f1_E    = (D.f[dM00])[k1w   ];
-      f1_S    = (D.f[d0P0])[k1n   ];
-      f1_N    = (D.f[d0M0])[k1s   ];
-      f1_B    = (D.f[d00P])[k1t   ];
-      f1_T    = (D.f[d00M])[k1b   ];
-      f1_SW   = (D.f[dPP0])[k1ne  ];
-      f1_NE   = (D.f[dMM0])[k1sw  ];
-      f1_NW   = (D.f[dPM0])[k1se  ];
-      f1_SE   = (D.f[dMP0])[k1nw  ];
-      f1_BW   = (D.f[dP0P])[k1te  ];
-      f1_TE   = (D.f[dM0M])[k1bw  ];
-      f1_TW   = (D.f[dP0M])[k1be  ];
-      f1_BE   = (D.f[dM0P])[k1tw  ];
-      f1_BS   = (D.f[d0PP])[k1tn  ];
-      f1_TN   = (D.f[d0MM])[k1bs  ];
-      f1_TS   = (D.f[d0PM])[k1bn  ];
-      f1_BN   = (D.f[d0MP])[k1ts  ];
-      f1_ZERO = (D.f[d000])[k1zero];
-      f1_BSW  = (D.f[dPPP])[k1tne ];
-      f1_BNE  = (D.f[dMMP])[k1tsw ];
-      f1_BNW  = (D.f[dPMP])[k1tse ];
-      f1_BSE  = (D.f[dMPP])[k1tnw ];
-      f1_TSW  = (D.f[dPPM])[k1bne ];
-      f1_TNE  = (D.f[dMMM])[k1bsw ];
-      f1_TNW  = (D.f[dPMM])[k1bse ];
-      f1_TSE  = (D.f[dMPM])[k1bnw ];
+      ////////////////////////////////////////////////////////////////////////////////
+      //! - Set neighbor indices (necessary for indirect addressing) for neighboring node
+      //!
+      vf::gpu::ListIndices neighborIndicesOfNeighbor(bcNeighborIndices[nodeIndex], neighborX, neighborY, neighborZ);
 
       //////////////////////////////////////////////////////////////////////////
-      real drho1    =  f1_ZERO+f1_E+f1_W+f1_N+f1_S+f1_T+f1_B+f1_NE+f1_SW+f1_SE+f1_NW+f1_TE+f1_BW+f1_BE+f1_TW+f1_TN+f1_BS+f1_BN+f1_TS+
-                          f1_TNE+f1_TSW+f1_TSE+f1_TNW+f1_BNE+f1_BSW+f1_BSE+f1_BNW;
+      //! - Read distributions: style of reading and writing the distributions from/to stored arrays dependent on timestep is based on the esoteric twist algorithm \ref
+      //! <a href="https://doi.org/10.3390/computation5020019"><b>[ M. Geier et al. (2017), DOI:10.3390/computation5020019 ]</b></a>
+      //!
+      Distributions27 dist;
+      getPointersToDistributions(dist, distributions, numberOfLBnodes, isEvenTimestep);
 
-      real vx1      =  ((f1_TSE - f1_BNW) - (f1_TNW - f1_BSE)) + ((f1_TNE - f1_BSW) - (f1_TSW - f1_BNE)) +
-                    ((f1_BE - f1_TW)   + (f1_TE - f1_BW))   + ((f1_SE - f1_NW)   + (f1_NE - f1_SW)) +
-                    (f1_E - f1_W);
+      ////////////////////////////////////////////////////////////////////////////////
+      //! - Set local distributions for neighboring node
+      //!
+      real f_Neighbor[27];
+      vf::gpu::getPreCollisionDistribution(f_Neighbor, dist, neighborIndicesOfNeighbor);
 
+      ////////////////////////////////////////////////////////////////////////////////
+      //! - Calculate macroscopic quantities (for neighboring node)
+      //!
+      real drho1;
+      real vx1;
+      real vx2;
+      real vx3;
+      vf::lbm::getIncompressibleMacroscopicValues(f_Neighbor, drho1, vx1, vx2, vx3);
+      real cusq = c3o2 * (vx1 * vx1 + vx2 * vx2 + vx3 * vx3);
 
-      real vx2    =   (-(f1_TSE - f1_BNW) + (f1_TNW - f1_BSE)) + ((f1_TNE - f1_BSW) - (f1_TSW - f1_BNE)) +
-                   ((f1_BN - f1_TS)   + (f1_TN - f1_BS))    + (-(f1_SE - f1_NW)  + (f1_NE - f1_SW)) +
-                   (f1_N - f1_S);
+      ////////////////////////////////////////////////////////////////////////////////
+      //! subtract the equilibrium (eq) to obtain the non-equilibrium (neq) (for neighboring node)
+      //!
+      f_Neighbor[d000] -= c8o27*  (drho1-(drho1+c1o1)*cusq);
+      f_Neighbor[dP00] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*( vx1        )+c9o2*( vx1        )*( vx1        )-cusq));
+      f_Neighbor[dM00] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(-vx1        )+c9o2*(-vx1        )*(-vx1        )-cusq));
+      f_Neighbor[d0P0] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(    vx2     )+c9o2*(     vx2    )*(     vx2    )-cusq));
+      f_Neighbor[d0M0] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(   -vx2     )+c9o2*(    -vx2    )*(    -vx2    )-cusq));
+      f_Neighbor[d00P] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(         vx3)+c9o2*(         vx3)*(         vx3)-cusq));
+      f_Neighbor[d00M] -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(        -vx3)+c9o2*(        -vx3)*(        -vx3)-cusq));
+      f_Neighbor[dPP0] -= c1o54*  (drho1+(drho1+c1o1)*(c3o1*( vx1+vx2    )+c9o2*( vx1+vx2    )*( vx1+vx2    )-cusq));
+      f_Neighbor[dMM0] -= c1o54*  (drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2    )+c9o2*(-vx1-vx2    )*(-vx1-vx2    )-cusq));
+      f_Neighbor[dPM0] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1-vx2    )+c9o2*( vx1-vx2    )*( vx1-vx2    )-cusq));
+      f_Neighbor[dMP0] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2    )+c9o2*(-vx1+vx2    )*(-vx1+vx2    )-cusq));
+      f_Neighbor[dP0P] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    +vx3)+c9o2*( vx1    +vx3)*( vx1    +vx3)-cusq));
+      f_Neighbor[dM0M] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    -vx3)+c9o2*(-vx1    -vx3)*(-vx1    -vx3)-cusq));
+      f_Neighbor[dP0M] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    -vx3)+c9o2*( vx1    -vx3)*( vx1    -vx3)-cusq));
+      f_Neighbor[dM0P] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    +vx3)+c9o2*(-vx1    +vx3)*(-vx1    +vx3)-cusq));
+      f_Neighbor[d0PP] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2+vx3)+c9o2*(     vx2+vx3)*(     vx2+vx3)-cusq));
+      f_Neighbor[d0MM] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2-vx3)+c9o2*(    -vx2-vx3)*(    -vx2-vx3)-cusq));
+      f_Neighbor[d0PM] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2-vx3)+c9o2*(     vx2-vx3)*(     vx2-vx3)-cusq));
+      f_Neighbor[d0MP] -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2+vx3)+c9o2*(    -vx2+vx3)*(    -vx2+vx3)-cusq));
+      f_Neighbor[dPPP] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2+vx3)+c9o2*( vx1+vx2+vx3)*( vx1+vx2+vx3)-cusq));
+      f_Neighbor[dMMM] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2-vx3)+c9o2*(-vx1-vx2-vx3)*(-vx1-vx2-vx3)-cusq));
+      f_Neighbor[dPPM] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2-vx3)+c9o2*( vx1+vx2-vx3)*( vx1+vx2-vx3)-cusq));
+      f_Neighbor[dMMP] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2+vx3)+c9o2*(-vx1-vx2+vx3)*(-vx1-vx2+vx3)-cusq));
+      f_Neighbor[dPMP] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2+vx3)+c9o2*( vx1-vx2+vx3)*( vx1-vx2+vx3)-cusq));
+      f_Neighbor[dMPM] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2-vx3)+c9o2*(-vx1+vx2-vx3)*(-vx1+vx2-vx3)-cusq));
+      f_Neighbor[dPMM] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2-vx3)+c9o2*( vx1-vx2-vx3)*( vx1-vx2-vx3)-cusq));
+      f_Neighbor[dMPP] -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2+vx3)+c9o2*(-vx1+vx2+vx3)*(-vx1+vx2+vx3)-cusq));
 
-      real vx3    =   ((f1_TSE - f1_BNW) + (f1_TNW - f1_BSE)) + ((f1_TNE - f1_BSW) + (f1_TSW - f1_BNE)) +
-                   (-(f1_BN - f1_TS)  + (f1_TN - f1_BS))   + ((f1_TE - f1_BW)   - (f1_BE - f1_TW)) +
-                   (f1_T - f1_B);
+      ////////////////////////////////////////////////////////////////////////////////
+      //! redefine drho1 with local rho
+      //!
+      drho1 = rhoBC[nodeIndex];
 
-      real cusq=c3o2*(vx1*vx1+vx2*vx2+vx3*vx3);
+      ////////////////////////////////////////////////////////////////////////////////
+      //! add the equilibrium (eq), which is calculated with rhoBClocal (for neighboring node)
+      //!
+      f_Neighbor[d000] += c8o27*  (drho1-(drho1+c1o1)*cusq);
+      f_Neighbor[dP00] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*( vx1        )+c9o2*( vx1        )*( vx1        )-cusq));
+      f_Neighbor[dM00] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(-vx1        )+c9o2*(-vx1        )*(-vx1        )-cusq));
+      f_Neighbor[d0P0] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(    vx2     )+c9o2*(     vx2    )*(     vx2    )-cusq));
+      f_Neighbor[d0M0] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(   -vx2     )+c9o2*(    -vx2    )*(    -vx2    )-cusq));
+      f_Neighbor[d00P] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(         vx3)+c9o2*(         vx3)*(         vx3)-cusq));
+      f_Neighbor[d00M] += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(        -vx3)+c9o2*(        -vx3)*(        -vx3)-cusq));
+      f_Neighbor[dPP0] += c1o54*  (drho1+(drho1+c1o1)*(c3o1*( vx1+vx2    )+c9o2*( vx1+vx2    )*( vx1+vx2    )-cusq));
+      f_Neighbor[dMM0] += c1o54*  (drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2    )+c9o2*(-vx1-vx2    )*(-vx1-vx2    )-cusq));
+      f_Neighbor[dPM0] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1-vx2    )+c9o2*( vx1-vx2    )*( vx1-vx2    )-cusq));
+      f_Neighbor[dMP0] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2    )+c9o2*(-vx1+vx2    )*(-vx1+vx2    )-cusq));
+      f_Neighbor[dP0P] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    +vx3)+c9o2*( vx1    +vx3)*( vx1    +vx3)-cusq));
+      f_Neighbor[dM0M] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    -vx3)+c9o2*(-vx1    -vx3)*(-vx1    -vx3)-cusq));
+      f_Neighbor[dP0M] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    -vx3)+c9o2*( vx1    -vx3)*( vx1    -vx3)-cusq));
+      f_Neighbor[dM0P] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    +vx3)+c9o2*(-vx1    +vx3)*(-vx1    +vx3)-cusq));
+      f_Neighbor[d0PP] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2+vx3)+c9o2*(     vx2+vx3)*(     vx2+vx3)-cusq));
+      f_Neighbor[d0MM] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2-vx3)+c9o2*(    -vx2-vx3)*(    -vx2-vx3)-cusq));
+      f_Neighbor[d0PM] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2-vx3)+c9o2*(     vx2-vx3)*(     vx2-vx3)-cusq));
+      f_Neighbor[d0MP] +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2+vx3)+c9o2*(    -vx2+vx3)*(    -vx2+vx3)-cusq));
+      f_Neighbor[dPPP] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2+vx3)+c9o2*( vx1+vx2+vx3)*( vx1+vx2+vx3)-cusq));
+      f_Neighbor[dMMM] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2-vx3)+c9o2*(-vx1-vx2-vx3)*(-vx1-vx2-vx3)-cusq));
+      f_Neighbor[dPPM] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2-vx3)+c9o2*( vx1+vx2-vx3)*( vx1+vx2-vx3)-cusq));
+      f_Neighbor[dMMP] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2+vx3)+c9o2*(-vx1-vx2+vx3)*(-vx1-vx2+vx3)-cusq));
+      f_Neighbor[dPMP] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2+vx3)+c9o2*( vx1-vx2+vx3)*( vx1-vx2+vx3)-cusq));
+      f_Neighbor[dMPM] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2-vx3)+c9o2*(-vx1+vx2-vx3)*(-vx1+vx2-vx3)-cusq));
+      f_Neighbor[dPMM] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2-vx3)+c9o2*( vx1-vx2-vx3)*( vx1-vx2-vx3)-cusq));
+      f_Neighbor[dMPP] +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2+vx3)+c9o2*(-vx1+vx2+vx3)*(-vx1+vx2+vx3)-cusq));
 
-      f1_ZERO  -= c8o27*  (drho1-(drho1+c1o1)*cusq);
-      f1_E     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*( vx1        )+c9o2*( vx1        )*( vx1        )-cusq));
-      f1_W     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(-vx1        )+c9o2*(-vx1        )*(-vx1        )-cusq));
-      f1_N     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(    vx2     )+c9o2*(     vx2    )*(     vx2    )-cusq));
-      f1_S     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(   -vx2     )+c9o2*(    -vx2    )*(    -vx2    )-cusq));
-      f1_T     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(         vx3)+c9o2*(         vx3)*(         vx3)-cusq));
-      f1_B     -= c2o27*  (drho1+(drho1+c1o1)*(c3o1*(        -vx3)+c9o2*(        -vx3)*(        -vx3)-cusq));
-      f1_NE    -= c1o54*  (drho1+(drho1+c1o1)*(c3o1*( vx1+vx2    )+c9o2*( vx1+vx2    )*( vx1+vx2    )-cusq));
-      f1_SW    -= c1o54*  (drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2    )+c9o2*(-vx1-vx2    )*(-vx1-vx2    )-cusq));
-      f1_SE    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1-vx2    )+c9o2*( vx1-vx2    )*( vx1-vx2    )-cusq));
-      f1_NW    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2    )+c9o2*(-vx1+vx2    )*(-vx1+vx2    )-cusq));
-      f1_TE    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    +vx3)+c9o2*( vx1    +vx3)*( vx1    +vx3)-cusq));
-      f1_BW    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    -vx3)+c9o2*(-vx1    -vx3)*(-vx1    -vx3)-cusq));
-      f1_BE    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    -vx3)+c9o2*( vx1    -vx3)*( vx1    -vx3)-cusq));
-      f1_TW    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    +vx3)+c9o2*(-vx1    +vx3)*(-vx1    +vx3)-cusq));
-      f1_TN    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2+vx3)+c9o2*(     vx2+vx3)*(     vx2+vx3)-cusq));
-      f1_BS    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2-vx3)+c9o2*(    -vx2-vx3)*(    -vx2-vx3)-cusq));
-      f1_BN    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2-vx3)+c9o2*(     vx2-vx3)*(     vx2-vx3)-cusq));
-      f1_TS    -=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2+vx3)+c9o2*(    -vx2+vx3)*(    -vx2+vx3)-cusq));
-      f1_TNE   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2+vx3)+c9o2*( vx1+vx2+vx3)*( vx1+vx2+vx3)-cusq));
-      f1_BSW   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2-vx3)+c9o2*(-vx1-vx2-vx3)*(-vx1-vx2-vx3)-cusq));
-      f1_BNE   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2-vx3)+c9o2*( vx1+vx2-vx3)*( vx1+vx2-vx3)-cusq));
-      f1_TSW   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2+vx3)+c9o2*(-vx1-vx2+vx3)*(-vx1-vx2+vx3)-cusq));
-      f1_TSE   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2+vx3)+c9o2*( vx1-vx2+vx3)*( vx1-vx2+vx3)-cusq));
-      f1_BNW   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2-vx3)+c9o2*(-vx1+vx2-vx3)*(-vx1+vx2-vx3)-cusq));
-      f1_BSE   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2-vx3)+c9o2*( vx1-vx2-vx3)*( vx1-vx2-vx3)-cusq));
-      f1_TNW   -=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2+vx3)+c9o2*(-vx1+vx2+vx3)*(-vx1+vx2+vx3)-cusq));
-
-     drho1 = rhoBC[k];
-
-      f1_ZERO  += c8o27*  (drho1-(drho1+c1o1)*cusq);
-      f1_E     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*( vx1        )+c9o2*( vx1        )*( vx1        )-cusq));
-      f1_W     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(-vx1        )+c9o2*(-vx1        )*(-vx1        )-cusq));
-      f1_N     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(    vx2     )+c9o2*(     vx2    )*(     vx2    )-cusq));
-      f1_S     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(   -vx2     )+c9o2*(    -vx2    )*(    -vx2    )-cusq));
-      f1_T     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(         vx3)+c9o2*(         vx3)*(         vx3)-cusq));
-      f1_B     += c2o27*  (drho1+(drho1+c1o1)*(c3o1*(        -vx3)+c9o2*(        -vx3)*(        -vx3)-cusq));
-      f1_NE    += c1o54*  (drho1+(drho1+c1o1)*(c3o1*( vx1+vx2    )+c9o2*( vx1+vx2    )*( vx1+vx2    )-cusq));
-      f1_SW    += c1o54*  (drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2    )+c9o2*(-vx1-vx2    )*(-vx1-vx2    )-cusq));
-      f1_SE    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1-vx2    )+c9o2*( vx1-vx2    )*( vx1-vx2    )-cusq));
-      f1_NW    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2    )+c9o2*(-vx1+vx2    )*(-vx1+vx2    )-cusq));
-      f1_TE    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    +vx3)+c9o2*( vx1    +vx3)*( vx1    +vx3)-cusq));
-      f1_BW    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    -vx3)+c9o2*(-vx1    -vx3)*(-vx1    -vx3)-cusq));
-      f1_BE    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*( vx1    -vx3)+c9o2*( vx1    -vx3)*( vx1    -vx3)-cusq));
-      f1_TW    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(-vx1    +vx3)+c9o2*(-vx1    +vx3)*(-vx1    +vx3)-cusq));
-      f1_TN    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2+vx3)+c9o2*(     vx2+vx3)*(     vx2+vx3)-cusq));
-      f1_BS    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2-vx3)+c9o2*(    -vx2-vx3)*(    -vx2-vx3)-cusq));
-      f1_BN    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(     vx2-vx3)+c9o2*(     vx2-vx3)*(     vx2-vx3)-cusq));
-      f1_TS    +=  c1o54* (drho1+(drho1+c1o1)*(c3o1*(    -vx2+vx3)+c9o2*(    -vx2+vx3)*(    -vx2+vx3)-cusq));
-      f1_TNE   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2+vx3)+c9o2*( vx1+vx2+vx3)*( vx1+vx2+vx3)-cusq));
-      f1_BSW   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2-vx3)+c9o2*(-vx1-vx2-vx3)*(-vx1-vx2-vx3)-cusq));
-      f1_BNE   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1+vx2-vx3)+c9o2*( vx1+vx2-vx3)*( vx1+vx2-vx3)-cusq));
-      f1_TSW   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1-vx2+vx3)+c9o2*(-vx1-vx2+vx3)*(-vx1-vx2+vx3)-cusq));
-      f1_TSE   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2+vx3)+c9o2*( vx1-vx2+vx3)*( vx1-vx2+vx3)-cusq));
-      f1_BNW   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2-vx3)+c9o2*(-vx1+vx2-vx3)*(-vx1+vx2-vx3)-cusq));
-      f1_BSE   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*( vx1-vx2-vx3)+c9o2*( vx1-vx2-vx3)*( vx1-vx2-vx3)-cusq));
-      f1_TNW   +=  c1o216*(drho1+(drho1+c1o1)*(c3o1*(-vx1+vx2+vx3)+c9o2*(-vx1+vx2+vx3)*(-vx1+vx2+vx3)-cusq));
-
+      //////////////////////////////////////////////////////////////////////////
 
       __syncthreads();
 
       ////////////////////////////////////////////////////////////////////////////////
       //! write the new distributions to the bc nodes (only for the relevant directions)
       //!
-
       switch (direction)
       {
          case dM00:
-            (D.f[dP00])[ke   ] = f1_W   ;
-            (D.f[d0P0])[kn   ] = f1_S   ;
-            (D.f[d0M0])[ks   ] = f1_N   ;
-            (D.f[d00P])[kt   ] = f1_B   ;
-            (D.f[d00M])[kb   ] = f1_T   ;
-            (D.f[dPP0])[kne  ] = f1_SW  ;
-            (D.f[dPM0])[kse  ] = f1_NW  ;
-            (D.f[dP0P])[kte  ] = f1_BW  ;
-            (D.f[dP0M])[kbe  ] = f1_TW  ;
-            (D.f[d0PP])[ktn  ] = f1_BS  ;
-            (D.f[d0MM])[kbs  ] = f1_TN  ;
-            (D.f[d0PM])[kbn  ] = f1_TS  ;
-            (D.f[d0MP])[kts  ] = f1_BN  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dPPP])[ktne ] = f1_BSW ;
-            (D.f[dPMP])[ktse ] = f1_BNW ;
-            (D.f[dPPM])[kbne ] = f1_TSW ;
-            (D.f[dPMM])[kbse ] = f1_TNW ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[d0P0])[neighborIndices.k_000] = f_Neighbor[d0P0];
+            (dist.f[d0M0])[neighborIndices.k_0M0] = f_Neighbor[d0M0];
+            (dist.f[d00P])[neighborIndices.k_000] = f_Neighbor[d00P];
+            (dist.f[d00M])[neighborIndices.k_00M] = f_Neighbor[d00M];
+            (dist.f[d0PP])[neighborIndices.k_000] = f_Neighbor[d0PP];
+            (dist.f[d0MM])[neighborIndices.k_0MM] = f_Neighbor[d0MM];
+            (dist.f[d0PM])[neighborIndices.k_00M] = f_Neighbor[d0PM];
+            (dist.f[d0MP])[neighborIndices.k_0M0] = f_Neighbor[d0MP];
+
+            (dist.f[dP00])[neighborIndices.k_000] = f_Neighbor[dP00];
+            (dist.f[dPP0])[neighborIndices.k_000] = f_Neighbor[dPP0];
+            (dist.f[dPM0])[neighborIndices.k_0M0] = f_Neighbor[dPM0];
+            (dist.f[dP0P])[neighborIndices.k_000] = f_Neighbor[dP0P];
+            (dist.f[dP0M])[neighborIndices.k_00M] = f_Neighbor[dP0M];
+            (dist.f[dPPP])[neighborIndices.k_000] = f_Neighbor[dPPP];
+            (dist.f[dPMP])[neighborIndices.k_0M0] = f_Neighbor[dPMP];
+            (dist.f[dPPM])[neighborIndices.k_00M] = f_Neighbor[dPPM];
+            (dist.f[dPMM])[neighborIndices.k_0MM] = f_Neighbor[dPMM];
             break;
          case dP00:
-            (D.f[dM00])[kw   ] = f1_E   ;
-            (D.f[d0P0])[kn   ] = f1_S   ;
-            (D.f[d0M0])[ks   ] = f1_N   ;
-            (D.f[d00P])[kt   ] = f1_B   ;
-            (D.f[d00M])[kb   ] = f1_T   ;
-            (D.f[dMM0])[ksw  ] = f1_NE  ;
-            (D.f[dMP0])[knw  ] = f1_SE  ;
-            (D.f[dM0M])[kbw  ] = f1_TE  ;
-            (D.f[dM0P])[ktw  ] = f1_BE  ;
-            (D.f[d0PP])[ktn  ] = f1_BS  ;
-            (D.f[d0MM])[kbs  ] = f1_TN  ;
-            (D.f[d0PM])[kbn  ] = f1_TS  ;
-            (D.f[d0MP])[kts  ] = f1_BN  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dMMP])[ktsw ] = f1_BNE ;
-            (D.f[dMPP])[ktnw ] = f1_BSE ;
-            (D.f[dMMM])[kbsw ] = f1_TNE ;
-            (D.f[dMPM])[kbnw ] = f1_TSE ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[d0P0])[neighborIndices.k_000] = f_Neighbor[d0P0];
+            (dist.f[d0M0])[neighborIndices.k_0M0] = f_Neighbor[d0M0];
+            (dist.f[d00P])[neighborIndices.k_000] = f_Neighbor[d00P];
+            (dist.f[d00M])[neighborIndices.k_00M] = f_Neighbor[d00M];
+            (dist.f[d0PP])[neighborIndices.k_000] = f_Neighbor[d0PP];
+            (dist.f[d0MM])[neighborIndices.k_0MM] = f_Neighbor[d0MM];
+            (dist.f[d0PM])[neighborIndices.k_00M] = f_Neighbor[d0PM];
+            (dist.f[d0MP])[neighborIndices.k_0M0] = f_Neighbor[d0MP];
+
+            (dist.f[dM00])[neighborIndices.k_M00] = f_Neighbor[dM00];
+            (dist.f[dMM0])[neighborIndices.k_MM0] = f_Neighbor[dMM0];
+            (dist.f[dMP0])[neighborIndices.k_M00] = f_Neighbor[dMP0];
+            (dist.f[dM0M])[neighborIndices.k_M0M] = f_Neighbor[dM0M];
+            (dist.f[dM0P])[neighborIndices.k_M00] = f_Neighbor[dM0P];
+            (dist.f[dMPP])[neighborIndices.k_M00] = f_Neighbor[dMPP];
+            (dist.f[dMMP])[neighborIndices.k_MM0] = f_Neighbor[dMMP];
+            (dist.f[dMPM])[neighborIndices.k_M0M] = f_Neighbor[dMPM];
+            (dist.f[dMMM])[neighborIndices.k_MMM] = f_Neighbor[dMMM];
             break;
          case d0M0:
-            (D.f[dP00])[ke   ] = f1_W   ;
-            (D.f[dM00])[kw   ] = f1_E   ;
-            (D.f[d0P0])[kn   ] = f1_S   ;
-            (D.f[d00P])[kt   ] = f1_B   ;
-            (D.f[d00M])[kb   ] = f1_T   ;
-            (D.f[dPP0])[kne  ] = f1_SW  ;
-            (D.f[dMP0])[knw  ] = f1_SE  ;
-            (D.f[dP0P])[kte  ] = f1_BW  ;
-            (D.f[dM0M])[kbw  ] = f1_TE  ;
-            (D.f[dP0M])[kbe  ] = f1_TW  ;
-            (D.f[dM0P])[ktw  ] = f1_BE  ;
-            (D.f[d0PP])[ktn  ] = f1_BS  ;
-            (D.f[d0PM])[kbn  ] = f1_TS  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dPPP])[ktne ] = f1_BSW ;
-            (D.f[dMPP])[ktnw ] = f1_BSE ;
-            (D.f[dPPM])[kbne ] = f1_TSW ;
-            (D.f[dMPM])[kbnw ] = f1_TSE ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[dP00])[neighborIndices.k_000] = f_Neighbor[dP00];
+            (dist.f[dM00])[neighborIndices.k_M00] = f_Neighbor[dM00];
+            (dist.f[d00P])[neighborIndices.k_000] = f_Neighbor[d00P];
+            (dist.f[d00M])[neighborIndices.k_00M] = f_Neighbor[d00M];
+            (dist.f[dP0P])[neighborIndices.k_000] = f_Neighbor[dP0P];
+            (dist.f[dM0M])[neighborIndices.k_M0M] = f_Neighbor[dM0M];
+            (dist.f[dP0M])[neighborIndices.k_00M] = f_Neighbor[dP0M];
+            (dist.f[dM0P])[neighborIndices.k_M00] = f_Neighbor[dM0P];
+
+            (dist.f[d0P0])[neighborIndices.k_000] = f_Neighbor[d0P0];
+            (dist.f[dPP0])[neighborIndices.k_000] = f_Neighbor[dPP0];
+            (dist.f[dMP0])[neighborIndices.k_M00] = f_Neighbor[dMP0];
+            (dist.f[d0PP])[neighborIndices.k_000] = f_Neighbor[d0PP];
+            (dist.f[d0PM])[neighborIndices.k_00M] = f_Neighbor[d0PM];
+            (dist.f[dPPP])[neighborIndices.k_000] = f_Neighbor[dPPP];
+            (dist.f[dMPP])[neighborIndices.k_M00] = f_Neighbor[dMPP];
+            (dist.f[dPPM])[neighborIndices.k_00M] = f_Neighbor[dPPM];
+            (dist.f[dMPM])[neighborIndices.k_M0M] = f_Neighbor[dMPM];
             break;
          case d0P0:
-            (D.f[dP00])[ke   ] = f1_W   ;
-            (D.f[dM00])[kw   ] = f1_E   ;
-            (D.f[d0M0])[ks   ] = f1_N   ;
-            (D.f[d00P])[kt   ] = f1_B   ;
-            (D.f[d00M])[kb   ] = f1_T   ;
-            (D.f[dMM0])[ksw  ] = f1_NE  ;
-            (D.f[dPM0])[kse  ] = f1_NW  ;
-            (D.f[dP0P])[kte  ] = f1_BW  ;
-            (D.f[dM0M])[kbw  ] = f1_TE  ;
-            (D.f[dP0M])[kbe  ] = f1_TW  ;
-            (D.f[dM0P])[ktw  ] = f1_BE  ;
-            (D.f[d0MM])[kbs  ] = f1_TN  ;
-            (D.f[d0MP])[kts  ] = f1_BN  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dMMP])[ktsw ] = f1_BNE ;
-            (D.f[dPMP])[ktse ] = f1_BNW ;
-            (D.f[dMMM])[kbsw ] = f1_TNE ;
-            (D.f[dPMM])[kbse ] = f1_TNW ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[dP00])[neighborIndices.k_000] = f_Neighbor[dP00];
+            (dist.f[dM00])[neighborIndices.k_M00] = f_Neighbor[dM00];
+            (dist.f[d00P])[neighborIndices.k_000] = f_Neighbor[d00P];
+            (dist.f[d00M])[neighborIndices.k_00M] = f_Neighbor[d00M];
+            (dist.f[dP0P])[neighborIndices.k_000] = f_Neighbor[dP0P];
+            (dist.f[dM0M])[neighborIndices.k_M0M] = f_Neighbor[dM0M];
+            (dist.f[dP0M])[neighborIndices.k_00M] = f_Neighbor[dP0M];
+            (dist.f[dM0P])[neighborIndices.k_M00] = f_Neighbor[dM0P];
+
+            (dist.f[d0M0])[neighborIndices.k_0M0] = f_Neighbor[d0M0];
+            (dist.f[dMM0])[neighborIndices.k_MM0] = f_Neighbor[dMM0];
+            (dist.f[dPM0])[neighborIndices.k_0M0] = f_Neighbor[dPM0];
+            (dist.f[d0MM])[neighborIndices.k_0MM] = f_Neighbor[d0MM];
+            (dist.f[d0MP])[neighborIndices.k_0M0] = f_Neighbor[d0MP];
+            (dist.f[dPMP])[neighborIndices.k_0M0] = f_Neighbor[dPMP];
+            (dist.f[dMMP])[neighborIndices.k_MM0] = f_Neighbor[dMMP];
+            (dist.f[dPMM])[neighborIndices.k_0MM] = f_Neighbor[dPMM];
+            (dist.f[dMMM])[neighborIndices.k_MMM] = f_Neighbor[dMMM];
             break;
          case d00M:
-            (D.f[dP00])[ke   ] = f1_W   ;
-            (D.f[dM00])[kw   ] = f1_E   ;
-            (D.f[d0P0])[kn   ] = f1_S   ;
-            (D.f[d0M0])[ks   ] = f1_N   ;
-            (D.f[d00P])[kt   ] = f1_B   ;
-            (D.f[dPP0])[kne  ] = f1_SW  ;
-            (D.f[dMM0])[ksw  ] = f1_NE  ;
-            (D.f[dPM0])[kse  ] = f1_NW  ;
-            (D.f[dMP0])[knw  ] = f1_SE  ;
-            (D.f[dP0P])[kte  ] = f1_BW  ;
-            (D.f[dM0P])[ktw  ] = f1_BE  ;
-            (D.f[d0PP])[ktn  ] = f1_BS  ;
-            (D.f[d0MP])[kts  ] = f1_BN  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dPPP])[ktne ] = f1_BSW ;
-            (D.f[dMMP])[ktsw ] = f1_BNE ;
-            (D.f[dPMP])[ktse ] = f1_BNW ;
-            (D.f[dMPP])[ktnw ] = f1_BSE ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[dP00])[neighborIndices.k_000] = f_Neighbor[dP00];
+            (dist.f[dM00])[neighborIndices.k_M00] = f_Neighbor[dM00];
+            (dist.f[d0P0])[neighborIndices.k_000] = f_Neighbor[d0P0];
+            (dist.f[d0M0])[neighborIndices.k_0M0] = f_Neighbor[d0M0];
+            (dist.f[dPP0])[neighborIndices.k_000] = f_Neighbor[dPP0];
+            (dist.f[dMM0])[neighborIndices.k_MM0] = f_Neighbor[dMM0];
+            (dist.f[dPM0])[neighborIndices.k_0M0] = f_Neighbor[dPM0];
+            (dist.f[dMP0])[neighborIndices.k_M00] = f_Neighbor[dMP0];
+
+            (dist.f[d00P])[neighborIndices.k_000] = f_Neighbor[d00P];
+            (dist.f[dP0P])[neighborIndices.k_000] = f_Neighbor[dP0P];
+            (dist.f[dM0P])[neighborIndices.k_M00] = f_Neighbor[dM0P];
+            (dist.f[d0PP])[neighborIndices.k_000] = f_Neighbor[d0PP];
+            (dist.f[d0MP])[neighborIndices.k_0M0] = f_Neighbor[d0MP];
+            (dist.f[dPPP])[neighborIndices.k_000] = f_Neighbor[dPPP];
+            (dist.f[dMPP])[neighborIndices.k_M00] = f_Neighbor[dMPP];
+            (dist.f[dPMP])[neighborIndices.k_0M0] = f_Neighbor[dPMP];
+            (dist.f[dMMP])[neighborIndices.k_MM0] = f_Neighbor[dMMP];
             break;
          case d00P:
-            (D.f[dP00])[ke   ] = f1_W   ;
-            (D.f[dM00])[kw   ] = f1_E   ;
-            (D.f[d0P0])[kn   ] = f1_S   ;
-            (D.f[d0M0])[ks   ] = f1_N   ;
-            (D.f[d00M])[kb   ] = f1_T   ;
-            (D.f[dPP0])[kne  ] = f1_SW  ;
-            (D.f[dMM0])[ksw  ] = f1_NE  ;
-            (D.f[dPM0])[kse  ] = f1_NW  ;
-            (D.f[dMP0])[knw  ] = f1_SE  ;
-            (D.f[dM0M])[kbw  ] = f1_TE  ;
-            (D.f[dP0M])[kbe  ] = f1_TW  ;
-            (D.f[d0MM])[kbs  ] = f1_TN  ;
-            (D.f[d0PM])[kbn  ] = f1_TS  ;
-            (D.f[d000])[kzero] = f1_ZERO;
-            (D.f[dPPM])[kbne ] = f1_TSW ;
-            (D.f[dMMM])[kbsw ] = f1_TNE ;
-            (D.f[dPMM])[kbse ] = f1_TNW ;
-            (D.f[dMPM])[kbnw ] = f1_TSE ;
+            (dist.f[d000])[neighborIndices.k_000] = f_Neighbor[d000];
+            (dist.f[dP00])[neighborIndices.k_000] = f_Neighbor[dP00];
+            (dist.f[dM00])[neighborIndices.k_M00] = f_Neighbor[dM00];
+            (dist.f[d0P0])[neighborIndices.k_000] = f_Neighbor[d0P0];
+            (dist.f[d0M0])[neighborIndices.k_0M0] = f_Neighbor[d0M0];
+            (dist.f[dPP0])[neighborIndices.k_000] = f_Neighbor[dPP0];
+            (dist.f[dMM0])[neighborIndices.k_MM0] = f_Neighbor[dMM0];
+            (dist.f[dPM0])[neighborIndices.k_0M0] = f_Neighbor[dPM0];
+            (dist.f[dMP0])[neighborIndices.k_M00] = f_Neighbor[dMP0];
+
+            (dist.f[d00M])[neighborIndices.k_00M] = f_Neighbor[d00M];
+            (dist.f[dM0M])[neighborIndices.k_M0M] = f_Neighbor[dM0M];
+            (dist.f[dP0M])[neighborIndices.k_00M] = f_Neighbor[dP0M];
+            (dist.f[d0MM])[neighborIndices.k_0MM] = f_Neighbor[d0MM];
+            (dist.f[d0PM])[neighborIndices.k_00M] = f_Neighbor[d0PM];
+            (dist.f[dPPM])[neighborIndices.k_00M] = f_Neighbor[dPPM];
+            (dist.f[dMPM])[neighborIndices.k_M0M] = f_Neighbor[dMPM];
+            (dist.f[dPMM])[neighborIndices.k_0MM] = f_Neighbor[dPMM];
+            (dist.f[dMMM])[neighborIndices.k_MMM] = f_Neighbor[dMMM];
             break;
          default:
-            break; 
+            break;
       }
    }
 }

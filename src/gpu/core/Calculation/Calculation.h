@@ -116,6 +116,16 @@ struct QforBoundaryConditions
    real *normalX, *normalY, *normalZ;
 };
 
+struct QforDirectionalBoundaryCondition
+{
+   int* k;
+   int* kN;
+   real* q27[27];
+   unsigned int numberOfBCnodes = 0;
+   real *RhoBC;
+   size_t direction;
+};
+
 struct QforPrecursorBoundaryConditions
 {
    int* k;

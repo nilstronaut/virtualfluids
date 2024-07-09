@@ -41,7 +41,7 @@
 #include "BoundaryConditions/Outflow/Outflow_Device.cuh"
 #include "Parameter/Parameter.h"
 
-void OutflowNonReflecting(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition)
+void OutflowNonReflecting(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition)
 {
     dim3 grid = vf::cuda::getCudaGrid( parameterDevice->numberofthreads,  boundaryCondition->numberOfBCnodes);
     dim3 threads(parameterDevice->numberofthreads, 1, 1 );
@@ -58,11 +58,11 @@ void OutflowNonReflecting(LBMSimulationParameter* parameterDevice, QforBoundaryC
         parameterDevice->neighborZ,
         parameterDevice->numberOfNodes,
         parameterDevice->isEvenTimestep,
-        vf::lbm::dir::dP00);  // #TODO: https://git.rz.tu-bs.de/irmb/VirtualFluids_dev/-/issues/176
+        static_cast<int>(boundaryCondition->direction));
     getLastCudaError("OutflowNonReflecting_Device execution failed");
 }
 
-void OutflowNonReflectingPressureCorrection(LBMSimulationParameter* parameterDevice, QforBoundaryConditions* boundaryCondition)
+void OutflowNonReflectingPressureCorrection(LBMSimulationParameter* parameterDevice, QforDirectionalBoundaryCondition* boundaryCondition)
 {
     dim3 grid = vf::cuda::getCudaGrid( parameterDevice->numberofthreads,  boundaryCondition->numberOfBCnodes);
     dim3 threads(parameterDevice->numberofthreads, 1, 1 );
@@ -79,7 +79,7 @@ void OutflowNonReflectingPressureCorrection(LBMSimulationParameter* parameterDev
         parameterDevice->neighborZ,
         parameterDevice->numberOfNodes,
         parameterDevice->isEvenTimestep,
-        vf::lbm::dir::dP00, // #TODO: https://git.rz.tu-bs.de/irmb/VirtualFluids_dev/-/issues/176
+        static_cast<int>(boundaryCondition->direction),
         parameterDevice->outflowPressureCorrectionFactor);
     getLastCudaError("OutflowNonReflectingPressureCorrection_Device execution failed");
 }

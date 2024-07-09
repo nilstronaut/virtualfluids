@@ -34,9 +34,11 @@
 #include "RestartObject.h"
 
 #include <fstream>
+#include <filesystem>
 
 #include "Parameter/Parameter.h"
 #include "basics/utilities/UbMath.h"
+#include "logger/Logger.h"
 
 void RestartObject::deserialize(const std::string &filename, std::shared_ptr<Parameter>& para)
 {
@@ -54,7 +56,7 @@ void RestartObject::deserialize(const std::string &filename, std::shared_ptr<Par
 
 void RestartObject::serialize(const std::string &filename, const std::shared_ptr<Parameter>& para)
 {
-    if (fs.size() > 0) {
+    if (!fs.empty()) {
         clear(para);
     }
     for (int index1 = para->getCoarse(); index1 <= para->getFine(); index1++) {
@@ -80,16 +82,30 @@ void RestartObject::clear(const std::shared_ptr<Parameter>& para)
     }
     fs.resize(0);
 }
+
+void RestartObject::delete_restart_file(const std::string& filename)
+{
+    const std::string file = filename + getFileExtension();
+    const bool wasDeleted = std::filesystem::remove(file.data());
+    if (!wasDeleted)
+        VF_LOG_WARNING("Could not delete the restart object file \"{}\".", file);
+}
+
 //////////////////////////////////////////////////////////////////////////
+
+std::string ASCIIRestartObject::getFileExtension() const
+{
+    return ".txt";
+}
 
 void ASCIIRestartObject::serialize_internal(const std::string &filename)
 {
-    std::ofstream stream(filename + ".txt");
+    std::ofstream stream(filename + getFileExtension());
 
     if (!stream) {
         stream.clear();
         std::string path = UbSystem::getPathFromString(filename);
-        if (path.size() > 0) {
+        if (!path.empty()) {
             UbSystem::makeDirectory(path);
             stream.open(filename.c_str());
         }
@@ -110,7 +126,7 @@ void ASCIIRestartObject::serialize_internal(const std::string &filename)
 
 void ASCIIRestartObject::deserialize_internal(const std::string &filename)
 {
-    std::ifstream stream(filename + ".txt", std::ios_base::in);
+    std::ifstream stream(filename + getFileExtension(), std::ios_base::in);
 
     if (!stream.is_open())
         throw UbException(UB_EXARGS, "couldn't open check point file " + filename);
@@ -130,14 +146,19 @@ void ASCIIRestartObject::deserialize_internal(const std::string &filename)
     stream.close();
 }
 
+std::string BinaryRestartObject::getFileExtension() const
+{
+    return ".bin";
+}
+
 void BinaryRestartObject::serialize_internal(const std::string &filename)
 {
-    std::ofstream stream(filename + ".bin", std::ios_base::binary);
+    std::ofstream stream(filename + getFileExtension(), std::ios_base::binary);
 
     if (!stream) {
         stream.clear();
         std::string path = UbSystem::getPathFromString(filename);
-        if (path.size() > 0) {
+        if (!path.empty()) {
             UbSystem::makeDirectory(path);
             stream.open(filename.c_str());
         }
@@ -165,7 +186,7 @@ void BinaryRestartObject::serialize_internal(const std::string &filename)
 
 void BinaryRestartObject::deserialize_internal(const std::string &filename)
 {
-    std::ifstream stream(filename + ".bin", std::ios_base::in | std::ifstream::binary);
+    std::ifstream stream(filename + getFileExtension(), std::ios_base::in | std::ifstream::binary);
 
     if (!stream.is_open())
         throw UbException(UB_EXARGS, "couldn't open check point file " + filename);

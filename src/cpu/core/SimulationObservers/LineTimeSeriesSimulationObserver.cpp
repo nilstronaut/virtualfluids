@@ -140,7 +140,7 @@ void LineTimeSeriesSimulationObserver::collectData()
         SPtr<Block3D> block = SimulationObserver::grid->getBlock(blockix1, blockix2, blockix3, level);
         if (block) {
             if (block->getRank() == gridRank) {
-                SPtr<ILBMKernel> kernel = block->getKernel();
+                SPtr<LBMKernel> kernel = block->getKernel();
                 calcMacros              = NULL;
                 if (kernel->getCompressible()) {
                     calcMacros = &D3Q27System::calcCompMacroscopicValues;

@@ -18,8 +18,8 @@ build-singularity-image:
     - privileged
 
   variables:
-    SINGULARITY_IMAGE: "regression-tests/hpc-test/Rockylinux9.sif"
-    SINGULARITY_FILE: "regression-tests/hpc-test/Rockylinux9.def"
+    SINGULARITY_IMAGE: "tests/regression-tests/hpc-test/Rockylinux9.sif"
+    SINGULARITY_FILE: "tests/regression-tests/hpc-test/Rockylinux9.def"
 
   artifacts:
     expire_in: 1 hrs
@@ -31,7 +31,7 @@ build-singularity-image:
       files:
         - $SINGULARITY_FILE
     paths:
-      - regression-tests/hpc-test/
+      - tests/regression-tests/hpc-test/
 
   script:
     - |
@@ -59,7 +59,7 @@ run-simulation:
     - pip install hpc-rocket==0.4.0
 
   script:
-    - hpc-rocket launch --watch regression-tests/hpc-test/rocket.yml
+    - hpc-rocket launch --watch tests/regression-tests/hpc-test/rocket.yml
     - cat results-regression-test/virtualfluids.out
 
   artifacts:
@@ -83,8 +83,8 @@ validate-simulation:
     - pip install "fieldcompare[all]"
     - fieldcompare --version
     - rm -rf reference_data && mkdir -p reference_data
-    - git clone --depth 1 --filter=blob:none --sparse https://github.com/irmb/test_data reference_data
-    - cd reference_data && git sparse-checkout add regression_tests/cpu/FlowAroundCylinder4processes && cd ..
+    - git clone --depth 1 --filter=blob:none --sparse https://git.rz.tu-bs.de/irmb/virtualfluids-reference-data reference_data
+    - cd reference_data && git sparse-checkout add regression_tests/cpu/LidDrivenCavity4Processes && cd ..
 
   script:
-     - fieldcompare dir results-regression-test/FlowAroundCylinder reference_data/regression_tests/cpu/FlowAroundCylinder4processes --include-files "*.vtu"
+     - fieldcompare dir results-regression-test/LidDrivenCavity reference_data/regression_tests/cpu/LidDrivenCavity4Processes --include-files "*.vtu"
