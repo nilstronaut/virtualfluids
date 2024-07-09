@@ -5,7 +5,7 @@
 
 The development environment for VirtualFluids is based on Docker. Docker is a tool that allows you to run applications in containers. A container is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries, and settings.
 
-The discription of the VirtualFluids Docker image can be found in the folder `Containers` in the root folder of the repository. The newest Docker image is based on the `ubuntu:22.04` image and contains all dependencies to run VirtualFluids. 
+The description of the VirtualFluids Docker image can be found in the folder `Containers` in the root folder of the repository. The newest Docker image is based on the `ubuntu:22.04` image and contains all dependencies to run VirtualFluids. 
 
 Every user of VirtualFluids can use the Dockerfile to create a new Docker image. However, a prebuild Docker image is available in the Gitlab CI Docker Registry here: [https://git.rz.tu-bs.de/irmb/VirtualFluids/container_registry](https://git.rz.tu-bs.de/irmb/VirtualFluids/container_registry).
 
@@ -25,7 +25,7 @@ A new image with the tag name `vf_base' can be created from the Containers folde
 docker build -t vf_base -f Ubuntu22_04.Dockerfile .
 ```
 
-We recommand to use the `vf_base` tag name for the first prebuild image and to create two new tags for the new image. To push the tags afterwards, the URL of the registry needs to part of the tag. Additionally, the first tag should be contain new version and the second tag contain the suffix `latest`. All current versions can be found [here](https://git.rz.tu-bs.de/irmb/VirtualFluids/container_registry/116). The following commands can be used to create the new tags:
+We recommend to use the `vf_base` tag name for the first prebuild image and to create two new tags for the new image. To push the tags afterwards, the URL of the registry needs to part of the tag. Additionally, the first tag should be contain new version and the second tag contain the suffix `latest`. All current versions can be found [here](https://git.rz.tu-bs.de/irmb/VirtualFluids/container_registry/116). The following commands can be used to create the new tags:
 ```bash
 docker image tag vf_base git.rz.tu-bs.de:4567/irmb/virtualfluids/ubuntu22_04:latest
 docker image tag vf_base git.rz.tu-bs.de:4567/irmb/virtualfluids/ubuntu22_04:1.3
