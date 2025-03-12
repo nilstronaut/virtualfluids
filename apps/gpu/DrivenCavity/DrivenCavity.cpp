@@ -49,6 +49,13 @@
 #include <gpu/core/Kernel/KernelTypes.h>
 #include <gpu/core/Parameter/Parameter.h>
 
+// velocity    = 1 m/s
+// velocityLB  = 0.0305
+// viscosityLB = 0.018605
+// Re = 100
+// dx = 0.0163934
+// dt = 0.0005
+
 void run(const vf::basics::ConfigurationFile& config)
 {
     //////////////////////////////////////////////////////////////////////////
@@ -57,15 +64,18 @@ void run(const vf::basics::ConfigurationFile& config)
     std::string path("./output/DrivenCavity");
     std::string simulationName("LidDrivenCavity");
 
-    const real length = 1.0;
-    const real reynoldsNumber = 1000.0;
-    const real velocity = 1.0;
-    const uint numberOfNodesX = 64;
+    // Physical Parameters
+    const real length = config.getValue<real>("L");
+    const real velocity = config.getValue<real>("u");
+    const real reynoldsNumber = config.getValue<real>("Re");
 
-    const uint timeStepOut = 1000;
-    const uint timeStepEnd = 10000;
+    // LBM Parameters
+    const real velocityLB = config.getValue<real>("uLB"); // LB units
+    const uint numberOfNodesX = config.getValue<unsigned int>("Nx");
 
-    real velocityLB = 0.05; // LB units
+    // Simulation Parameters
+    const uint timeStepOut = config.getValue<unsigned int>("dtOut");
+    const uint timeStepEnd = config.getValue<unsigned int>("tEnd");;
 
     bool refine = false;
     if (config.contains("refine"))
@@ -74,15 +84,12 @@ void run(const vf::basics::ConfigurationFile& config)
     if (config.contains("output_path"))
         path = config.getValue<std::string>("output_path");
 
-    if (config.contains("velocityLB"))
-        velocityLB = config.getValue<real>("velocityLB");
-
     //////////////////////////////////////////////////////////////////////////
     // compute parameters in lattice units
     //////////////////////////////////////////////////////////////////////////
 
     const real deltaX = length / real(numberOfNodesX);
-    // const real deltaT = velocityLB / velocity * deltaX;
+    const real deltaT = velocityLB / velocity * deltaX;
 
     const real vxLB = velocityLB / sqrt(2.0); // LB units
     const real vyLB = velocityLB / sqrt(2.0); // LB units
@@ -127,7 +134,7 @@ void run(const vf::basics::ConfigurationFile& config)
     para->setTimestepOut(timeStepOut);
     para->setTimestepEnd(timeStepEnd);
 
-    para->configureMainKernel(vf::collisionKernel::compressible::K17CompressibleNavierStokes);
+    para->configureMainKernel(vf::collision_kernel::compressible::K17CompressibleNavierStokes);
 
     //////////////////////////////////////////////////////////////////////////
     // set boundary conditions
