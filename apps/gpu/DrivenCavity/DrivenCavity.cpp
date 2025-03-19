@@ -49,13 +49,6 @@
 #include <gpu/core/Kernel/KernelTypes.h>
 #include <gpu/core/Parameter/Parameter.h>
 
-// velocity    = 1 m/s
-// velocityLB  = 0.0305
-// viscosityLB = 0.018605
-// Re = 100
-// dx = 0.0163934
-// dt = 0.0005
-
 void run(const vf::basics::ConfigurationFile& config)
 {
     //////////////////////////////////////////////////////////////////////////
@@ -64,18 +57,19 @@ void run(const vf::basics::ConfigurationFile& config)
     std::string path("./output/DrivenCavity");
     std::string simulationName("LidDrivenCavity");
 
-    // Physical Parameters
-    const real length = config.getValue<real>("L");
-    const real velocity = config.getValue<real>("u");
-    const real reynoldsNumber = config.getValue<real>("Re");
+    const real length = 1.0;
+    //const real reynoldsNumber = 1000.0;
+    const real velocity = 1.0;
+    //const uint numberOfNodesX = 64;
 
-    // LBM Parameters
-    const real velocityLB = config.getValue<real>("uLB"); // LB units
-    const uint numberOfNodesX = config.getValue<unsigned int>("Nx");
+    //const uint timeStepOut = 100;
+    //const uint timeStepEnd = 10000;
 
-    // Simulation Parameters
-    const uint timeStepOut = config.getValue<unsigned int>("dtOut");
-    const uint timeStepEnd = config.getValue<unsigned int>("tEnd");;
+    real velocityLB = 0.05; // LB units
+    uint numberOfNodesX = 64;
+    real reynoldsNumber = 1000.0;
+    uint timeStepOut = 100;
+    uint timeStepEnd = 10000;
 
     bool refine = false;
     if (config.contains("refine"))
@@ -84,17 +78,33 @@ void run(const vf::basics::ConfigurationFile& config)
     if (config.contains("output_path"))
         path = config.getValue<std::string>("output_path");
 
+    if (config.contains("velocityLB"))
+        velocityLB = config.getValue<real>("velocityLB");
+
+    if (config.contains("numberOfNodesX"))
+        numberOfNodesX = config.getValue<real>("numberOfNodesX");
+
+    if (config.contains("reynoldsNumber"))
+        reynoldsNumber = config.getValue<real>("reynoldsNumber");
+
+    if (config.contains("timeStepOut"))
+        timeStepOut = config.getValue<real>("timeStepOut");
+
+    if (config.contains("timeStepEnd"))
+        timeStepEnd = config.getValue<real>("timeStepEnd");
+
     //////////////////////////////////////////////////////////////////////////
     // compute parameters in lattice units
     //////////////////////////////////////////////////////////////////////////
 
     const real deltaX = length / real(numberOfNodesX);
-    const real deltaT = velocityLB / velocity * deltaX;
+    // const real deltaT = velocityLB / velocity * deltaX;
 
     const real vxLB = velocityLB / sqrt(2.0); // LB units
     const real vyLB = velocityLB / sqrt(2.0); // LB units
 
     const real viscosityLB = numberOfNodesX * velocityLB / reynoldsNumber; // LB units
+    // const real viscosityLB = 1.0 * velocityLB / reynoldsNumber; // LB units
 
     //////////////////////////////////////////////////////////////////////////
     // create grid
